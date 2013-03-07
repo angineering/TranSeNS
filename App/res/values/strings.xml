@@ -4,5 +4,7 @@
     <string name="app_name">Thesis</string>
     <string name="hello_world">Hello world!</string>
     <string name="menu_settings">Settings</string>
+    <string name="OnOff">Track</string>
+    <string name="killApp">Kill App</string>
 
 </resources>
