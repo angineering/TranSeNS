@@ -1,6 +1,7 @@
 package uk.co.computicake.angela.thesis;
 
 import java.text.DecimalFormat;
+import java.util.Date;
 
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -34,6 +35,7 @@ public class MainActivity extends Activity implements SensorEventListener {
 	private GraphicalView view;
 	private AccelerationTimeChart chart = new AccelerationTimeChart();
 	private static Thread thread;
+	private float pos = 0;
 	
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -145,9 +147,10 @@ public class MainActivity extends Activity implements SensorEventListener {
 		tSpeed.setText(d.format(speed));
 		Log.d(DEBUG_TAG, "speed: "+ speed);
 		
-		
-		Point p = new Point(1f, (float)speed);
+		Date date = new Date(); 
+		Point p = new Point(pos++, (float)speed);
 		chart.addNewPoints(p);
+		chart.adjust_x((int)pos);
 		view.repaint();
 		
 	}
