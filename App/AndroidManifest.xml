@@ -22,6 +22,8 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- Allows us to switch between our activity and the graphing activity -->
+        <activity android:name="org.achartengine.GraphicalActivity" />
     </application>
 
 </manifest>
