@@ -11,7 +11,11 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.Dialog;
+import android.support.v4.app.DialogFragment;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.util.Log;
 import android.view.Menu;
@@ -46,27 +50,28 @@ public class MainActivity extends Activity implements SensorEventListener {
         connMgr  = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         layout = (LinearLayout) findViewById(R.id.chart);
         
-        // might need to go in toggleActive
-      /*  thread = new Thread() {
-        	public void run() {
-        		// loop through the timespan
-        			//time delay (sleep) for how often we're getting data
-        			try {
-						Thread.sleep(500);
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
-        			// Point p = datapoint
-        			// add point to chart
-        			// chart.addNewPoint(p);
-        			// repaint the view
-        			view.repaint();
-        	}
-        		
-        };*/
-        
+        //if there is no linear accelerometer present
+        if(accelerometer == null){
+        	missingSensorAlert().show();
+  		
+        }
     }
-
+    
+    public Dialog missingSensorAlert(){
+    	String alert_text = "No linear accelerometer present. Exiting.";
+    	AlertDialog.Builder builder = new AlertDialog.Builder(this);
+    	builder.setMessage(alert_text)
+    		   .setPositiveButton("OK", new DialogInterface.OnClickListener() {				
+				@Override
+				public void onClick(DialogInterface dialog, int which) {
+					// Exit app
+					finish();				
+				}
+			});
+    	// Create the AlerDialog object and return it
+    	return builder.create();
+    }
+    
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -82,13 +87,15 @@ public class MainActivity extends Activity implements SensorEventListener {
     	boolean on = ((ToggleButton) view).isChecked();
     	Log.d(DEBUG_TAG, ""+ on);
     	if(on){
+    		// Clear chart from possible previous go
+    		chart.clear();
     		//Start tracking
             sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
           //  thread.start();
     	} else {
     		// Stop tracking and prepare to send data on wifi connect
     		TextView t = (TextView)findViewById(R.id.speed);
-    		t.setText("STOPPED");
+    		t.setText("STOPPED");   		
     		sensorManager.unregisterListener(this);
     	}
     	
@@ -147,7 +154,6 @@ public class MainActivity extends Activity implements SensorEventListener {
 		tSpeed.setText(d.format(speed));
 		Log.d(DEBUG_TAG, "speed: "+ speed);
 		
-		Date date = new Date(); 
 		Point p = new Point(pos++, (float)speed);
 		chart.addNewPoints(p);
 		chart.adjust_x((int)pos);

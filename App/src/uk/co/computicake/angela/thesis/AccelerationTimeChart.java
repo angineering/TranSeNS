@@ -15,11 +15,10 @@ import android.graphics.Color;
 
 public class AccelerationTimeChart {
 	
+	TimeSeries dataset;
 	private GraphicalView view;
-	
-	private TimeSeries dataset = new TimeSeries("Acceleration");
 	private XYSeriesRenderer renderer = new XYSeriesRenderer(); // This will be used for customisation
-	private XYMultipleSeriesDataset mDataset = new XYMultipleSeriesDataset();
+	private XYMultipleSeriesDataset mDataset;
 	private XYMultipleSeriesRenderer mRenderer = new XYMultipleSeriesRenderer(); 
 	
 	private static int MAX_X_SIZE = 80;
@@ -28,6 +27,8 @@ public class AccelerationTimeChart {
 	
 	public AccelerationTimeChart() {
 		
+		TimeSeries dataset = new TimeSeries("Acceleration");
+		mDataset = new XYMultipleSeriesDataset();
 		mDataset.addSeries(dataset);
 		
 		renderer.setColor(ANDROID_ICS_COLOUR);
@@ -64,5 +65,11 @@ public class AccelerationTimeChart {
 		if(pos > MAX_X_SIZE){
 			mRenderer.setXAxisMin(++x_pos);
 		}
+	}
+	
+	public void clear(){
+		TimeSeries dataset = new TimeSeries("Acceleration");
+		mDataset = new XYMultipleSeriesDataset();
+		mDataset.addSeries(dataset);
 	}
 }
