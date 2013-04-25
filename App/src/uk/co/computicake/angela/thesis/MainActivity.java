@@ -13,10 +13,11 @@ import android.os.Bundle;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
-import android.support.v4.app.DialogFragment;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
@@ -32,17 +33,19 @@ public class MainActivity extends Activity implements SensorEventListener {
 	private SensorManager sensorManager;
 	private Sensor accelerometer;
 	private ConnectivityManager connMgr;
+	private BroadcastReceiver receiver;
 	private final float NOISE = (float) 0.1; 
 	
 	// Graph
 	private LinearLayout layout;
 	private GraphicalView view;
 	private AccelerationTimeChart chart = new AccelerationTimeChart();
-	private static Thread thread;
+	//private static Thread thread;
 	private float pos = 0;
 	
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+    	Log.i("create", "Creating stuff");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
@@ -50,18 +53,37 @@ public class MainActivity extends Activity implements SensorEventListener {
         connMgr  = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         layout = (LinearLayout) findViewById(R.id.chart);
         
+        // Handles connectivity status notifications.
+       // receiver = new ConnectivityReceiver();
+      //  registerReceiver(receiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION)); //without this is only picks up wifi state changed
+        receiver = new BroadcastReceiver(){
+			@Override
+			public void onReceive(Context context, Intent intent) {
+				Log.i("wifi", "connected: "+wifiConnected()); // THIS WORKS LIKE A CHARM BIATCHES!
+				if(wifiConnected()){
+					// send completed journeys!!
+				}
+				
+			}
+        	
+        };
+        
+        // can go into one really
+        IntentFilter i = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
+        registerReceiver(receiver,i);
+        
         //if there is no linear accelerometer present
-        if(accelerometer == null){
+        if(accelerometer == null){       	
         	missingSensorAlert().show();
   		
         }
     }
     
-    public Dialog missingSensorAlert(){
-    	String alert_text = "No linear accelerometer present. Exiting.";
+    public Dialog missingSensorAlert() {
+    	String alert_text = "No linear accelerometer present.\n\n Exiting.";
     	AlertDialog.Builder builder = new AlertDialog.Builder(this);
     	builder.setMessage(alert_text)
-    		   .setPositiveButton("OK", new DialogInterface.OnClickListener() {				
+    		   .setNeutralButton("OK", new DialogInterface.OnClickListener() {				
 				@Override
 				public void onClick(DialogInterface dialog, int which) {
 					// Exit app
@@ -91,12 +113,14 @@ public class MainActivity extends Activity implements SensorEventListener {
     		chart.clear();
     		//Start tracking
             sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
-          //  thread.start();
+          //  thread.start(); // was I using this for anything?
     	} else {
-    		// Stop tracking and prepare to send data on wifi connect
+    		// Stop tracking and prepare to send data on WiFi connect
     		TextView t = (TextView)findViewById(R.id.speed);
     		t.setText("STOPPED");   		
     		sensorManager.unregisterListener(this);
+    		// make sure all data is saved
+    		Log.d("wificonn", "connected:"+wifiConnected()); // This works! 
     	}
     	
     }
@@ -109,7 +133,8 @@ public class MainActivity extends Activity implements SensorEventListener {
     	layout.addView(view);
    }
     
-    protected void sendData() { 	
+    // Send already finished journeys, starting with the older ones
+    protected void sendData() { 
     	if(wifiConnected()){
     		final String DEBUG_TAG = "Uploading Data";
     		// upload data to server
@@ -120,6 +145,8 @@ public class MainActivity extends Activity implements SensorEventListener {
     
     }
     
+    // TODO: this might not be needed now that there's a broadcast receiver
+    // would it perhaps be better to do a OnWifiConnected --> send data? How can we get the device to notify on network change, instead of polling for it (save battery)
     public boolean wifiConnected(){
     	final String DEBUG_TAG = "Network Status";
     	NetworkInfo networkInfo = connMgr.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
@@ -136,6 +163,7 @@ public class MainActivity extends Activity implements SensorEventListener {
 		
 	}
 
+	
 	@Override
 	public void onSensorChanged(SensorEvent event) {
 		final String DEBUG_TAG = "Sensor Changed";
