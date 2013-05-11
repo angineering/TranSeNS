@@ -1,5 +1,6 @@
 package uk.co.computicake.angela.thesis;
 
+import java.io.FileOutputStream;
 import java.text.DecimalFormat;
 import java.util.Date;
 
@@ -10,6 +11,7 @@ import android.hardware.SensorManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
+import android.os.Environment;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -18,6 +20,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.text.format.DateUtils;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
@@ -35,6 +38,7 @@ public class MainActivity extends Activity implements SensorEventListener {
 	private ConnectivityManager connMgr;
 	private BroadcastReceiver receiver;
 	private final float NOISE = (float) 0.1; 
+	private String data; // The gathered data
 	
 	// Graph
 	private LinearLayout layout;
@@ -60,12 +64,10 @@ public class MainActivity extends Activity implements SensorEventListener {
 			@Override
 			public void onReceive(Context context, Intent intent) {
 				Log.i("wifi", "connected: "+wifiConnected()); // THIS WORKS LIKE A CHARM BIATCHES!
-				if(wifiConnected()){
-					// send completed journeys!!
-				}
-				
-			}
-        	
+				if(wifiConnected()){					
+					sendData();
+				}				
+			}       	
         };
         
         // can go into one really
@@ -121,6 +123,10 @@ public class MainActivity extends Activity implements SensorEventListener {
     		sensorManager.unregisterListener(this);
     		// make sure all data is saved
     		Log.d("wificonn", "connected:"+wifiConnected()); // This works! 
+    		
+    		
+    		storeData();
+    		
     	}
     	
     }
@@ -137,7 +143,7 @@ public class MainActivity extends Activity implements SensorEventListener {
     protected void sendData() { 
     	if(wifiConnected()){
     		final String DEBUG_TAG = "Uploading Data";
-    		// upload data to server
+    		// upload data to server NOTE: There should prolly be a separate class that deals with db and connections to it.
     		
     		boolean uploaded = false;
     		Log.d(DEBUG_TAG, "Uploaded: "+uploaded);
@@ -145,8 +151,21 @@ public class MainActivity extends Activity implements SensorEventListener {
     
     }
     
-    // TODO: this might not be needed now that there's a broadcast receiver
-    // would it perhaps be better to do a OnWifiConnected --> send data? How can we get the device to notify on network change, instead of polling for it (save battery)
+    // Store gathered data internally, for security
+    // And for testing. try on SD card later in process, as files are likely to be huge.
+    private void storeData(){
+    	String Filename = new Date().toString();
+    	try{
+    		FileOutputStream fos = openFileOutput(Filename, Context.MODE_PRIVATE);
+    		fos.write(data.getBytes());
+    		fos.close();
+    	} catch (Exception e){
+    		Log.e("storeData", "Could not store data.");
+    		e.printStackTrace();
+    	}   	
+    }
+    
+
     public boolean wifiConnected(){
     	final String DEBUG_TAG = "Network Status";
     	NetworkInfo networkInfo = connMgr.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
