@@ -27,7 +27,7 @@ public class AccelerationTimeChart {
 	
 	public AccelerationTimeChart() {
 		
-		TimeSeries dataset = new TimeSeries("Acceleration");
+		dataset = new TimeSeries("Acceleration");
 		mDataset = new XYMultipleSeriesDataset();
 		mDataset.addSeries(dataset);
 		
@@ -38,9 +38,8 @@ public class AccelerationTimeChart {
 		
 		renderer.setFillBelowLineColor(Color.argb(120,51, 181,229));
 		
-		//cannot be bothered to enable zoom at present
-		
-		mRenderer.setXTitle("Time in s");
+		//cannot be bothered to enable zoom at present		
+		mRenderer.setXTitle("Time");
 		mRenderer.setYTitle("m/s");
 		x_pos = 0;
 		
@@ -68,7 +67,7 @@ public class AccelerationTimeChart {
 	}
 	
 	public void clear(){
-		TimeSeries dataset = new TimeSeries("Acceleration");
+		dataset = new TimeSeries("Acceleration");
 		mDataset = new XYMultipleSeriesDataset();
 		mDataset.addSeries(dataset);
 	}

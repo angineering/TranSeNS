@@ -5,5 +5,6 @@
 	<classpathentry exported="true" kind="con" path="com.android.ide.eclipse.adt.ANDROID_FRAMEWORK"/>
 	<classpathentry exported="true" kind="con" path="com.android.ide.eclipse.adt.LIBRARIES"/>
 	<classpathentry kind="lib" path="libs/achartengine-1.0.0.jar"/>
+	<classpathentry kind="lib" path="C:/Program Files (x86)/Restlet Framework/Edition Android/2.1.2/lib/org.restlet.jar"/>
 	<classpathentry kind="output" path="bin/classes"/>
 </classpath>
