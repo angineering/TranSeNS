@@ -1,5 +1,7 @@
 package uk.co.computicake.angela.thesis;
 
+// TODO implement threading. Doing too much wok on main thread!
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -29,6 +31,7 @@ import android.content.IntentFilter;
 import android.text.format.DateUtils;
 import android.util.Log;
 import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -48,14 +51,15 @@ public class MainActivity extends Activity implements SensorEventListener {
 	private Sensor accelerometer;
 	private ConnectivityManager connMgr;
 	private BroadcastReceiver receiver;
-	private final float NOISE = (float) 0.1; 
-	private String data = ""; // The gathered data
 	private LocationManager locationManager;
+	private final float NOISE = (float) 0.1; 
+	private String data = ""; // consider changing this to an array list 
+	
 	
 	// Graph
 	private LinearLayout layout;
 	private GraphicalView view;
-	private AccelerationTimeChart chart = new AccelerationTimeChart();
+	private AccelerationTimeChart chart;
 	//private static Thread thread;
 	private float pos = 0;
 	
@@ -63,22 +67,21 @@ public class MainActivity extends Activity implements SensorEventListener {
 	
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-    	Log.i("create", "Creating stuff");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
         connMgr  = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        layout = (LinearLayout) findViewById(R.id.chart);
+        initialiseChart();
+        
         
         // Handles connectivity status notifications.
         // receiver = new ConnectivityReceiver();
         // registerReceiver(receiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION)); //without this is only picks up wifi state changed
         receiver = new BroadcastReceiver(){
 			@Override
-			public void onReceive(Context context, Intent intent) {
-				Log.i("wifi", "connected: "+wifiConnected()); // THIS WORKS LIKE A CHARM BIATCHES!
+			public void onReceive(Context context, Intent intent) {				
 				if(wifiConnected()){					
 					sendData();
 				}				
@@ -92,8 +95,15 @@ public class MainActivity extends Activity implements SensorEventListener {
         //if there is no linear accelerometer present
         if(accelerometer == null){       	
         	missingSensorAlert().show();
-  		
         }
+    }
+    
+    //mainly for debugging purposes
+    private void initialiseChart(){
+    	chart  = new AccelerationTimeChart();
+    	layout = (LinearLayout) findViewById(R.id.chart);
+    	view = chart.getView(this);
+    	layout.addView(view);
     }
     
     /**
@@ -121,6 +131,16 @@ public class MainActivity extends Activity implements SensorEventListener {
         getMenuInflater().inflate(R.menu.activity_main, menu);
         return true;
     }
+    
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item){
+    	switch (item.getItemId()){
+    	case R.id.kill:
+    		finish();
+    	default:
+    		return super.onOptionsItemSelected(item);
+    	}
+    }
     /**
      * Tracks data on active
      * @param view
@@ -128,7 +148,7 @@ public class MainActivity extends Activity implements SensorEventListener {
     public void onToggleActive(View view){
     	final String DEBUG_TAG = "Toggle Active";    	
     	boolean on = ((ToggleButton) view).isChecked();
-    	Log.d(DEBUG_TAG, ""+ on);
+    	if(DEBUG) Log.d(DEBUG_TAG, ""+ on);
     	if(on){
     		//Start tracking
             sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
@@ -141,33 +161,62 @@ public class MainActivity extends Activity implements SensorEventListener {
     		t.setText("STOPPED");   		
     		sensorManager.unregisterListener(this);
     		// Clear chart
-    		chart.clear();
-
-    		// make sure all data is saved
-       		storeData();
-       		if(wifiConnected()){
-       			sendData();
-       		}
+    		//chart.clear();
     		
+       		if(wifiConnected()){
+       			if (!sendCurrentData()) storeData();
+       		} else {
+       			storeData();
+       		}
+    		data = ""; //technically doing this twice. decide where you want it. 
+    		//initialiseChart();
+    		//chart  = new AccelerationTimeChart();
+    		//view = chart.getView(this);
+    		//layout.removeAllViews();
+            //layout.addView(view);
+    		//initialiseChart();
     	}
     	
     }
     
-    // Need to override onStart
     @Override
-   protected void onStart() {
+    protected void onStart() {
     	super.onStart();
-    	view = chart.getView(this);
-    	layout.addView(view);
-   }
+    	//view = chart.getView(this);
+    	//layout.addView(view);
+    }
     
-    // Send already finished journeys, starting with the older ones
+    /**
+     * Uploads the data that has just been gathered to the db.
+     * @return true if the upload was successful.
+     */
+    private boolean sendCurrentData(){
+    	boolean uploaded = false;
+    	String json = "{\"docs\":[" + data + "]}";
+    	// use RESTClient to upload json data
+    	RESTClient rc = new RESTClient();
+    	
+    	try {
+			//rc.createDB(""+ new Date().getTime());
+    		// TODO: Blocks when waiting for server. make this threaded(/asynch?)
+    		rc.checkServer();
+		} catch (Exception e) {
+			Log.e("checkServer", "Could not reach server");
+			e.printStackTrace();
+		}
+    	return uploaded;
+    }
+    
+    /**
+    * Upload already finished journeys.
+    */
     protected void sendData() { 
     	if(wifiConnected()){
     		final String DEBUG_TAG = "Uploading Data";
-    		// upload data to server NOTE: There should prolly be a separate class that deals with db and connections to it.
+    		// upload data to server using RESTClient
     		String[] fileTuple = findFile();
     		boolean uploaded = true;
+   
     		if(uploaded && fileTuple != null){
     			deleteFile(fileTuple[0]);
     		}
@@ -175,6 +224,11 @@ public class MainActivity extends Activity implements SensorEventListener {
     	}
     
     }
+    
+    /**
+     * Finds a file that has been stored on the internal hdd.
+     * @return array tuple (filename, file contents as String).
+     */
     private String[] findFile(){
     	String file = "";
     	String[] fileList = fileList();
@@ -198,12 +252,16 @@ public class MainActivity extends Activity implements SensorEventListener {
     }
     
     // And for testing. try on SD card later in process, as files are likely to be huge. (NOTE: 10000 lines is 2.5 MB it seems)
+    /**
+     * Wrapper for storing recorded data
+     */
     private void storeData(){
     	String filename = "thesis-" +new Date().getTime() + ".txt";
     	Log.v("Storing", filename);
     	storeInternally(filename);
     }
     
+    /*
     // the fuck did this say OK when there is no external storage? O_O
     private void storeExternally(String filename){
     	String tag = "ExternalStorage";
@@ -229,8 +287,11 @@ public class MainActivity extends Activity implements SensorEventListener {
 	    	}
     	}   	
     }
+    */
     
-	// Store gathered data internally, for security
+	/**
+	 * Store gathered data internally, for security
+	 */
     private void storeInternally(String filename){
     	String tag = "InternalStorage";
     	String json = "{\"docs\":[" + data + "]}";
@@ -247,6 +308,10 @@ public class MainActivity extends Activity implements SensorEventListener {
     	}   	
     }
     
+    /**
+     * Checks if the phone is connected to the wifi.
+     * @return true if connected
+     */
     public boolean wifiConnected(){
     	final String DEBUG_TAG = "Network Status";
     	NetworkInfo networkInfo = connMgr.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
@@ -273,7 +338,6 @@ public class MainActivity extends Activity implements SensorEventListener {
 		float y = event.values[1];
 		float z = event.values[2];
 		// should give 0 when the phone is at rest, as gravity is not included in readings.
-		// Set a noise threshold 
 		double speed = Math.sqrt(x*x + y*y + z*z); 
 		
 		TextView tSpeed = (TextView)findViewById(R.id.speed);

@@ -47,8 +47,7 @@ public class AccelerationTimeChart {
 		mRenderer.addSeriesRenderer(renderer);
 	}
 	
-	public GraphicalView getView(Context context){
-		
+	public GraphicalView getView(Context context){	
 		view = ChartFactory.getLineChartView(context, mDataset, mRenderer); //possibly getTimeChartView instead
 		return view;
 	}

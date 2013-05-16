@@ -45,6 +45,12 @@
             	<action android:name="android.net.conn.CONNECTIVITY_CHANGE"/>
             </intent-filter>           
         </receiver> -->
+        <service android:name=".service.ContactService" android:exported="true" android:enabled="true">
+    		<intent-filter>
+        		<action android:name="uk.co.computicake.angela.thesis.RESTClient" />
+    		</intent-filter>
+		</service>
     </application>
-
+	
+    
 </manifest>

@@ -1,7 +1,13 @@
 // NOTE: Code copied from pervasive coursework
+//TODO: Change String return types to boolean
 package uk.co.computicake.angela.thesis;
 
+import org.restlet.data.ChallengeResponse;
+import org.restlet.data.ChallengeScheme;
 import org.restlet.data.MediaType;
+import org.restlet.data.Status;
+import org.restlet.engine.Engine;
+import org.restlet.ext.net.HttpClientHelper;
 import org.restlet.representation.StringRepresentation;
 import org.restlet.resource.ClientResource;
 
@@ -11,19 +17,29 @@ import android.util.Log;
 public class RESTClient {
 	
 	// GUEST permissions, not admit. only for uploading and not for reading data.
-	private static String username; 
-    private static String password; 
-    private static String ip = null;  
-    private static final String DEFAULT_PORT = ":5984/";
-    private static String inputFile; // ../resources/sample_sensor_data.txt
-    private static String url; // http://username:password@ip:port
-    private static String dbName; 
+	private static String username = "app_user"; 
+    private static String password = "Android0.1"; 
+    //private static String domain = "angela.computicake.co.uk";  
+    //private static final String DEFAULT_PORT = ":5986/";
+    //private static String inputFile; 
+    private static final String URL = "https://app_user:Android0.1@angela.computicake.co.uk:5986/"; // http://username:password@ip:port
+    //private static String dbName; 
     private static ClientResource resource;
     
     
     public RESTClient(){
-    	
+    	resource = new ClientResource(URL);
+    	resource.getReference().setBaseRef(URL);  	
+    	// Do I need to set challenge response?
+    	ChallengeResponse authentication = new ChallengeResponse(
+                ChallengeScheme.HTTP_BASIC,
+                username,
+                password);
+            resource.setChallengeResponse(authentication);
+       Engine.getInstance().getRegisteredClients().clear();
+       Engine.getInstance().getRegisteredClients().add(new HttpClientHelper(null));
     }
+    
     /**
      * Pings the db instance. Return the response text from the server
      *
@@ -31,15 +47,32 @@ public class RESTClient {
      * @throws Exception
      */
    // @Get()
-    public String checkDB() throws Exception {
-        String response;
+    public boolean checkServer() throws Exception {
+        boolean success;
+        resource.get();
+        /*
         try {
-            response = resource.get().getText();
+            response = resource.getStatus();
         } catch (Exception e){
             e.printStackTrace();
-            response = "Could not connect to db or server.";
+            response = "Could not connect to server.";
         }
-        return response;
+        */
+        if (resource.getStatus().isSuccess()) {  
+            Log.i("ping server", resource.getResponseEntity().getText());
+            success = true;
+        } else if (resource.getStatus()  
+                .equals(Status.CLIENT_ERROR_UNAUTHORIZED)) {   
+            Log.w("ping server", "Access denied. Check credentials"); // not technically needed, as we don't change these
+            success = false;
+        } else {  
+            // Unexpected status  
+            Log.w("ping server","An unexpected status was returned: "  
+                    + resource.getStatus());  
+            success = false;
+        }  
+       // Log.i("ping server", response);
+        return success;
     }
     /**
      * Creates a db . Returns the response text from the server.
@@ -57,6 +90,7 @@ public class RESTClient {
         } catch(Exception e){
            response = "Could not create db "+db +"; "+e.getMessage();
         }
+        Log.i("Creating db", response);
         return "Creating db: "+response;
     }
     /**
