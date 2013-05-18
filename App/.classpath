@@ -5,15 +5,5 @@
 	<classpathentry exported="true" kind="con" path="com.android.ide.eclipse.adt.ANDROID_FRAMEWORK"/>
 	<classpathentry exported="true" kind="con" path="com.android.ide.eclipse.adt.LIBRARIES"/>
 	<classpathentry kind="lib" path="libs/achartengine-1.0.0.jar"/>
-	<classpathentry kind="lib" path="C:/Program Files (x86)/Restlet Framework/Edition Android/2.1.2/lib/org.restlet.jar"/>
-	<classpathentry kind="lib" path="C:/Program Files (x86)/Restlet Framework/Edition Android/2.1.2/lib/org.jsslutils_1.0/org.jsslutils.jar"/>
-	<classpathentry kind="lib" path="C:/Program Files (x86)/Restlet Framework/Edition Android/2.1.2/lib/org.restlet.ext.ssl.jar"/>
-	<classpathentry kind="lib" path="C:/Program Files (x86)/Restlet Framework/Edition Android/2.1.2/lib/org.apache.commons.codec_1.5/org.apache.commons.codec.jar"/>
-	<classpathentry kind="lib" path="C:/Program Files (x86)/Restlet Framework/Edition Android/2.1.2/lib/org.apache.httpclient_4.1/org.apache.httpclient.jar"/>
-	<classpathentry kind="lib" path="C:/Program Files (x86)/Restlet Framework/Edition Android/2.1.2/lib/org.apache.httpcore_4.1/org.apache.httpcore.jar"/>
-	<classpathentry kind="lib" path="C:/Program Files (x86)/Restlet Framework/Edition Android/2.1.2/lib/org.apache.httpmime_4.1/org.apache.httpmime.jar"/>
-	<classpathentry kind="lib" path="C:/Program Files (x86)/Restlet Framework/Edition Android/2.1.2/lib/net.jcip.annotations_1.0/net.jcip.annotations.jar"/>
-	<classpathentry kind="lib" path="C:/Program Files (x86)/Restlet Framework/Edition Android/2.1.2/lib/org.apache.commons.logging_1.1/org.apache.commons.logging.jar"/>
-	<classpathentry kind="lib" path="C:/Program Files (x86)/Restlet Framework/Edition Android/2.1.2/lib/org.apache.james.mime4j_0.6/org.apache.james.mime4j.jar"/>
 	<classpathentry kind="output" path="bin/classes"/>
 </classpath>

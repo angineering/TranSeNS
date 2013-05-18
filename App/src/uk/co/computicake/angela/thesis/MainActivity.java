@@ -18,8 +18,10 @@ import android.location.Location;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.StrictMode;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -44,8 +46,9 @@ import org.json.JSONStringer;
 
 public class MainActivity extends Activity implements SensorEventListener {
 	
-	public static boolean DEBUG = false;
-	public static boolean WARN = true;
+	private static final boolean DEVELOPER_MODE = true;
+	private static final boolean DEBUG = false;
+	private static final boolean WARN = true;
 	
 	private SensorManager sensorManager;
 	private Sensor accelerometer;
@@ -67,6 +70,20 @@ public class MainActivity extends Activity implements SensorEventListener {
 	
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+    	if (DEVELOPER_MODE) {
+            StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder()
+                    .detectDiskReads()
+                    .detectDiskWrites()
+                    .detectNetwork()   // or .detectAll() for all detectable problems
+                    .penaltyLog()
+                    .build());
+            StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder()
+                    //.detectLeakedClosableObjects()
+                    .penaltyLog()
+                    .penaltyDeath()
+                    .build());
+        }
+    	//Log.d("Create", "Creating");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
@@ -194,8 +211,8 @@ public class MainActivity extends Activity implements SensorEventListener {
     	boolean uploaded = false;
     	String json = "{\"docs\":[" + data + "]}";
     	// use RESTClient to upload json data
-    	RESTClient rc = new RESTClient();
-    	
+    	new UploadFilesTask().execute(json);
+    	/*
     	try {
 			//rc.createDB(""+ new Date().getTime());
     		// TODO: Blocks when waiting for server. make this threaded(/asynch?)
@@ -203,7 +220,7 @@ public class MainActivity extends Activity implements SensorEventListener {
 		} catch (Exception e) {
 			Log.e("checkServer", "Could not reach server");
 			e.printStackTrace();
-		}
+		}*/
     	return uploaded;
     }
     
@@ -383,5 +400,34 @@ public class MainActivity extends Activity implements SensorEventListener {
     protected void onStop(){
     	super.onStop();
     	
+    }
+    
+    private class UploadFilesTask extends AsyncTask<String, Void, Boolean> {
+    	// Do long-running work in here
+    	protected Boolean doInBackground(String...strings ){
+    		RESTClient rc = new RESTClient();
+    		String db = "thesis-" + new Date().getTime();
+    		boolean result;
+			try {
+				result = rc.checkServer();
+				rc.createDB(db);
+				rc.addDocuments(db, strings[0]);
+			} catch (Exception e) {
+				result = false;
+				e.printStackTrace();
+			}
+    		return result;
+    	}
+    	
+    	// Called each time you call publishProcess()
+    	protected void onProgressUpdate(){
+    		
+    	}
+    	
+    	// Is called when doInBackground finishes
+    	protected void onPostExecute(){
+    		
+    	}
+
     }
 }

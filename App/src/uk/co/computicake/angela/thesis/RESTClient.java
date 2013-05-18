@@ -2,12 +2,13 @@
 //TODO: Change String return types to boolean
 package uk.co.computicake.angela.thesis;
 
+import org.restlet.ext.httpclient.HttpClientHelper;
 import org.restlet.data.ChallengeResponse;
 import org.restlet.data.ChallengeScheme;
 import org.restlet.data.MediaType;
 import org.restlet.data.Status;
 import org.restlet.engine.Engine;
-import org.restlet.ext.net.HttpClientHelper;
+//import org.restlet.ext.net.HttpClientHelper;
 import org.restlet.representation.StringRepresentation;
 import org.restlet.resource.ClientResource;
 
@@ -22,7 +23,7 @@ public class RESTClient {
     //private static String domain = "angela.computicake.co.uk";  
     //private static final String DEFAULT_PORT = ":5986/";
     //private static String inputFile; 
-    private static final String URL = "https://app_user:Android0.1@angela.computicake.co.uk:5986/"; // http://username:password@ip:port
+    private static final String URL = "http://app_user:Android0.1@angela.computicake.co.uk:5986/"; // http://username:password@ip:port
     //private static String dbName; 
     private static ClientResource resource;
     
@@ -136,6 +137,7 @@ public class RESTClient {
             e.printStackTrace();
             response = "Could not bulk add documents";
         }
+        Log.i("Add documents", response);
         return "Bulk adding documents: " + response;
     }
 
