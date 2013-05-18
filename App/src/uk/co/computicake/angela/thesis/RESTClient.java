@@ -2,6 +2,10 @@
 //TODO: Change String return types to boolean
 package uk.co.computicake.angela.thesis;
 
+import org.apache.http.conn.scheme.Scheme;
+import org.apache.http.conn.scheme.SchemeRegistry;
+import org.apache.http.conn.ssl.SSLSocketFactory;
+import org.restlet.Client;
 import org.restlet.ext.httpclient.HttpClientHelper;
 import org.restlet.data.ChallengeResponse;
 import org.restlet.data.ChallengeScheme;
@@ -39,6 +43,7 @@ public class RESTClient {
             resource.setChallengeResponse(authentication);
        Engine.getInstance().getRegisteredClients().clear();
        Engine.getInstance().getRegisteredClients().add(new HttpClientHelper(null));
+       
     }
     
     /**
@@ -124,21 +129,26 @@ public class RESTClient {
      * @throws Exception
      */
  //   @Post()
-    public String addDocuments(String db, String file) throws Exception {
+    public boolean addDocuments(String db, String file) throws Exception {
         String response;
         // I experienced problems with this timing out over VPN. It should in theory work,
         // and I know it worked for others to bulk send the whole file, so might be a VPN thing.
         // TODO: create Util class for handling formatting of data.
         //String jsonData = Util.formatData(file); 
         resource.getReference().setLastSegment(db+"/_bulk_docs");
+        boolean result;
         try{
-            response = resource.post(new StringRepresentation(file, MediaType.APPLICATION_JSON)).getText();
+            resource.post(new StringRepresentation(file, MediaType.APPLICATION_JSON)).getText();
+            response = "success";
+            result = true;
         } catch(Exception e){
             e.printStackTrace();
             response = "Could not bulk add documents";
+            result = false;
         }
+        //Log.d("Add documents", response); // Don't really want to log all of this (the server response). too long.
         Log.i("Add documents", response);
-        return "Bulk adding documents: " + response;
+        return result;
     }
 
     /**
@@ -147,4 +157,6 @@ public class RESTClient {
     public static void log(String m) {
         Log.v("RESTClient", m);
     }
+    
+
 }

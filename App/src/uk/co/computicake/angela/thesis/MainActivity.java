@@ -9,6 +9,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.Date;
+import java.util.concurrent.ExecutionException;
 
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -58,7 +59,6 @@ public class MainActivity extends Activity implements SensorEventListener {
 	private final float NOISE = (float) 0.1; 
 	private String data = ""; // consider changing this to an array list 
 	
-	
 	// Graph
 	private LinearLayout layout;
 	private GraphicalView view;
@@ -91,17 +91,15 @@ public class MainActivity extends Activity implements SensorEventListener {
         connMgr  = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         initialiseChart();
-        
-        
-        // Handles connectivity status notifications.
+               
+        //Handles connectivity status notifications.
         // receiver = new ConnectivityReceiver();
         // registerReceiver(receiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION)); //without this is only picks up wifi state changed
+
         receiver = new BroadcastReceiver(){
 			@Override
 			public void onReceive(Context context, Intent intent) {				
-				if(wifiConnected()){					
-					sendData();
-				}				
+				if(wifiConnected())  new SendStoredFilesTask().execute();		//sendData();		
 			}       	
         };
         
@@ -125,7 +123,7 @@ public class MainActivity extends Activity implements SensorEventListener {
     
     /**
      * Displays an alert box notification and exits if the linear acceleration sensor is missing.
-     * @return Dialog
+     * @return Dialog with an error message and then kills the app
      */
     public Dialog missingSensorAlert() {
     	String alert_text = "No linear accelerometer present.\n\n Exiting.";
@@ -134,11 +132,9 @@ public class MainActivity extends Activity implements SensorEventListener {
     		   .setNeutralButton("OK", new DialogInterface.OnClickListener() {				
 				@Override
 				public void onClick(DialogInterface dialog, int which) {
-					// Exit app
 					finish();				
 				}
 			});
-    	// Create the AlerDialog object and return it
     	return builder.create();
     }
     
@@ -157,9 +153,10 @@ public class MainActivity extends Activity implements SensorEventListener {
     	default:
     		return super.onOptionsItemSelected(item);
     	}
-    }
+    }    
+    
     /**
-     * Tracks data on active
+     * Tracks data on active, sends or stores data when turned off
      * @param view
      */
     public void onToggleActive(View view){
@@ -181,17 +178,11 @@ public class MainActivity extends Activity implements SensorEventListener {
     		//chart.clear();
     		
        		if(wifiConnected()){
-       			if (!sendCurrentData()) storeData();
+       			sendCurrentData();
        		} else {
        			storeData();
        		}
-    		data = ""; //technically doing this twice. decide where you want it. 
-    		//initialiseChart();
-    		//chart  = new AccelerationTimeChart();
-    		//view = chart.getView(this);
-    		//layout.removeAllViews();
-            //layout.addView(view);
-    		//initialiseChart();
+    		data = ""; //technically doing this twice  if it's stored. decide where you want it. 
     	}
     	
     }
@@ -205,26 +196,14 @@ public class MainActivity extends Activity implements SensorEventListener {
     
     /**
      * Uploads the data that has just been gathered to the db.
-     * @return true if the upload was successful.
+     * 
      */
-    private boolean sendCurrentData(){
-    	boolean uploaded = false;
-    	String json = "{\"docs\":[" + data + "]}";
-    	// use RESTClient to upload json data
+    private void sendCurrentData(){
+    	String json = "{\"docs\":[" + data + "]}";	
     	new UploadFilesTask().execute(json);
-    	/*
-    	try {
-			//rc.createDB(""+ new Date().getTime());
-    		// TODO: Blocks when waiting for server. make this threaded(/asynch?)
-    		rc.checkServer();
-		} catch (Exception e) {
-			Log.e("checkServer", "Could not reach server");
-			e.printStackTrace();
-		}*/
-    	return uploaded;
     }
     
-    /**
+    /*
     * Upload already finished journeys.
     */
     protected void sendData() { 
@@ -251,7 +230,7 @@ public class MainActivity extends Activity implements SensorEventListener {
     	String[] fileList = fileList();
     	if (fileList == null || fileList.length == 0) return null;
     	String filename = fileList[0];
-    	Log.d("findOldest", filename);
+    	Log.d("findFile", filename);
     	try{
     		FileInputStream fis = openFileInput(filename);
     		int content;
@@ -260,7 +239,7 @@ public class MainActivity extends Activity implements SensorEventListener {
     		}
     		fis.close();
     	} catch (IOException e){
-    		Log.w("FindOldest", "File not found.");
+    		Log.w("FindFile", "File not found.");
     		e.printStackTrace();
     	}
     	String[] fileTuple =  {filename, file};
@@ -273,13 +252,12 @@ public class MainActivity extends Activity implements SensorEventListener {
      * Wrapper for storing recorded data
      */
     private void storeData(){
-    	String filename = "thesis-" +new Date().getTime() + ".txt";
+    	String filename = "thesis-" +new Date().getTime(); //+ ".txt";
     	Log.v("Storing", filename);
     	storeInternally(filename);
     }
     
     /*
-    // the fuck did this say OK when there is no external storage? O_O
     private void storeExternally(String filename){
     	String tag = "ExternalStorage";
     	boolean sdAvailable = false;
@@ -315,7 +293,7 @@ public class MainActivity extends Activity implements SensorEventListener {
     	//Log.d("write", json);
     	try{
     		FileOutputStream fos = openFileOutput(filename, Context.MODE_PRIVATE);
-    		fos.write(data.getBytes());
+    		fos.write(json.getBytes());
     		fos.close();
     		data = "";
     		Log.d(tag, "File written to storage");
@@ -349,8 +327,9 @@ public class MainActivity extends Activity implements SensorEventListener {
 		final String DEBUG_TAG = "Sensor Changed";
 		if (DEBUG) Log.d(DEBUG_TAG, "Sensor change registered.");
 		// We don't care about super-precision, as there is a lot of noise
-		DecimalFormat d = new DecimalFormat("#.###");
-
+		DecimalFormat d = new DecimalFormat("#.##");
+		String shortSpeed;
+		
 		float x = event.values[0];
 		float y = event.values[1];
 		float z = event.values[2];
@@ -358,12 +337,13 @@ public class MainActivity extends Activity implements SensorEventListener {
 		double speed = Math.sqrt(x*x + y*y + z*z); 
 		
 		TextView tSpeed = (TextView)findViewById(R.id.speed);
-		if(Math.abs(speed - oldSpeed) < NOISE){
+		if(Math.abs(speed - oldSpeed) < NOISE){ // This does not do as intended. does speed < NOISE, as oldSpeed is never changed from 0
 			tSpeed.setText("0.00");
 			return;
 		}
-		tSpeed.setText(d.format(speed));
-		if (DEBUG) Log.d(DEBUG_TAG, "speed: "+ speed);
+		shortSpeed = d.format(speed);
+		tSpeed.setText(shortSpeed);
+		if (DEBUG) Log.d(DEBUG_TAG, "speed: "+ shortSpeed);
 		
 		
 		// Record speed
@@ -378,7 +358,7 @@ public class MainActivity extends Activity implements SensorEventListener {
 					.key("location")
 					.value(location)
 					.key("speed")
-					.value(speed)
+					.value(new Float(shortSpeed)) //muligens lettere med int for map/reduce?
 					.key("time")
 					.value(time)
 					.endObject()
@@ -406,12 +386,19 @@ public class MainActivity extends Activity implements SensorEventListener {
     	// Do long-running work in here
     	protected Boolean doInBackground(String...strings ){
     		RESTClient rc = new RESTClient();
-    		String db = "thesis-" + new Date().getTime();
+    		String db;
+    		if(strings.length == 2){
+    			db = strings[1];
+    		} else {
+    			db = "thesis-" + new Date().getTime();
+    		}
     		boolean result;
 			try {
 				result = rc.checkServer();
-				rc.createDB(db);
-				rc.addDocuments(db, strings[0]);
+				if(result){ // not sure if this is strictly necessary, as we are within a try/catch
+					rc.createDB(db);
+					rc.addDocuments(db, strings[0]);
+				}
 			} catch (Exception e) {
 				result = false;
 				e.printStackTrace();
@@ -419,15 +406,34 @@ public class MainActivity extends Activity implements SensorEventListener {
     		return result;
     	}
     	
-    	// Called each time you call publishProcess()
-    	protected void onProgressUpdate(){
-    		
-    	}
-    	
     	// Is called when doInBackground finishes
-    	protected void onPostExecute(){
-    		
+    	protected void onPostExecute(Boolean result){
+    		// if we for some reason can't reach the server
+    		if(!result){
+    			storeData();
+    		}
     	}
 
     }
+    
+    private class SendStoredFilesTask extends AsyncTask<Void, Void, String[]>{
+
+		@Override
+		protected String[] doInBackground(Void... params) {
+    		// upload data to server using RESTClient
+    		String[] fileTuple = findFile();    		     		
+			return fileTuple;
+		}
+		protected void onPostExecute(String[] response){
+			String[] fileTuple = response;
+			if(fileTuple != null){
+    			new UploadFilesTask().execute(fileTuple[1], fileTuple[0]); 
+    			deleteFile(fileTuple[0]);
+    		} else {
+    			Log.d("SendStored", "No stored files to send");
+    		}
+		}
+    	
+    }
+    
 }
