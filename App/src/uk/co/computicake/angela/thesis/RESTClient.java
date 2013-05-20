@@ -21,21 +21,17 @@ import android.util.Log;
 
 public class RESTClient {
 	
-	// GUEST permissions, not admit. only for uploading and not for reading data.
+	// GUEST permissions, not admin. only for uploading and not for reading data.
 	private static String username = "app_user"; 
     private static String password = "Android0.1"; 
     //private static String domain = "angela.computicake.co.uk";  
-    //private static final String DEFAULT_PORT = ":5986/";
-    //private static String inputFile; 
     private static final String URL = "http://app_user:Android0.1@angela.computicake.co.uk:5986/"; // http://username:password@ip:port
-    //private static String dbName; 
     private static ClientResource resource;
     
     
     public RESTClient(){
     	resource = new ClientResource(URL);
     	resource.getReference().setBaseRef(URL);  	
-    	// Do I need to set challenge response?
     	ChallengeResponse authentication = new ChallengeResponse(
                 ChallengeScheme.HTTP_BASIC,
                 username,
@@ -56,14 +52,7 @@ public class RESTClient {
     public boolean checkServer() throws Exception {
         boolean success;
         resource.get();
-        /*
-        try {
-            response = resource.getStatus();
-        } catch (Exception e){
-            e.printStackTrace();
-            response = "Could not connect to server.";
-        }
-        */
+
         if (resource.getStatus().isSuccess()) {  
             Log.i("ping server", resource.getResponseEntity().getText());
             success = true;
@@ -77,9 +66,9 @@ public class RESTClient {
                     + resource.getStatus());  
             success = false;
         }  
-       // Log.i("ping server", response);
         return success;
     }
+    
     /**
      * Creates a db . Returns the response text from the server.
      * Each trip corresponds to a db.
@@ -99,6 +88,7 @@ public class RESTClient {
         Log.i("Creating db", response);
         return "Creating db: "+response;
     }
+    
     /**
      * Add a single document to couchdb.
      *
@@ -131,22 +121,17 @@ public class RESTClient {
  //   @Post()
     public boolean addDocuments(String db, String file) throws Exception {
         String response;
-        // I experienced problems with this timing out over VPN. It should in theory work,
-        // and I know it worked for others to bulk send the whole file, so might be a VPN thing.
-        // TODO: create Util class for handling formatting of data.
-        //String jsonData = Util.formatData(file); 
         resource.getReference().setLastSegment(db+"/_bulk_docs");
         boolean result;
         try{
             resource.post(new StringRepresentation(file, MediaType.APPLICATION_JSON)).getText();
-            response = "success";
+            response = "success " + db;
             result = true;
         } catch(Exception e){
             e.printStackTrace();
             response = "Could not bulk add documents";
             result = false;
         }
-        //Log.d("Add documents", response); // Don't really want to log all of this (the server response). too long.
         Log.i("Add documents", response);
         return result;
     }

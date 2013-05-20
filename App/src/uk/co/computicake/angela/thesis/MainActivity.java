@@ -99,7 +99,13 @@ public class MainActivity extends Activity implements SensorEventListener {
         receiver = new BroadcastReceiver(){
 			@Override
 			public void onReceive(Context context, Intent intent) {				
-				if(wifiConnected())  new SendStoredFilesTask().execute();		//sendData();		
+				if(wifiConnected()){
+					//anything that requires asynchronous operation is not available, 
+					//because you will need to return from the function to handle the asynchronous operation, 
+					//but at that point the BroadcastReceiver is no longer active and thus the system is free 
+					//to kill its process before the asynchronous operation completes.
+					new SendStoredFilesTask().execute();	
+				}
 			}       	
         };
         
@@ -149,6 +155,8 @@ public class MainActivity extends Activity implements SensorEventListener {
     public boolean onOptionsItemSelected(MenuItem item){
     	switch (item.getItemId()){
     	case R.id.kill:
+    		unregisterReceiver(receiver);
+    		sensorManager.unregisterListener(this, accelerometer);
     		finish();
     	default:
     		return super.onOptionsItemSelected(item);
@@ -195,30 +203,11 @@ public class MainActivity extends Activity implements SensorEventListener {
     }
     
     /**
-     * Uploads the data that has just been gathered to the db.
-     * 
+     * Uploads the data that has just been gathered to the db. 
      */
     private void sendCurrentData(){
     	String json = "{\"docs\":[" + data + "]}";	
     	new UploadFilesTask().execute(json);
-    }
-    
-    /*
-    * Upload already finished journeys.
-    */
-    protected void sendData() { 
-    	if(wifiConnected()){
-    		final String DEBUG_TAG = "Uploading Data";
-    		// upload data to server using RESTClient
-    		String[] fileTuple = findFile();
-    		boolean uploaded = true;
-   
-    		if(uploaded && fileTuple != null){
-    			deleteFile(fileTuple[0]);
-    		}
-    		if (DEBUG) Log.d(DEBUG_TAG, "Uploaded: "+uploaded);
-    	}
-    
     }
     
     /**
@@ -252,7 +241,7 @@ public class MainActivity extends Activity implements SensorEventListener {
      * Wrapper for storing recorded data
      */
     private void storeData(){
-    	String filename = "thesis-" +new Date().getTime(); //+ ".txt";
+    	String filename = "thesis-" +new Date().getTime();
     	Log.v("Storing", filename);
     	storeInternally(filename);
     }
@@ -290,7 +279,6 @@ public class MainActivity extends Activity implements SensorEventListener {
     private void storeInternally(String filename){
     	String tag = "InternalStorage";
     	String json = "{\"docs\":[" + data + "]}";
-    	//Log.d("write", json);
     	try{
     		FileOutputStream fos = openFileOutput(filename, Context.MODE_PRIVATE);
     		fos.write(json.getBytes());
