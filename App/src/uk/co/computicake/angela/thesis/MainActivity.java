@@ -56,6 +56,8 @@ public class MainActivity extends Activity implements SensorEventListener {
 	private static final boolean DEVELOPER_MODE = true;
 	private static final boolean DEBUG = false;
 	private static final boolean WARN = true;
+	private static final int ONE_MINUTE = 60*1000;
+	private static final int LOC_UPDATE_FREQ = 6*1000;
 	
 	private SensorManager sensorManager;
 	private Sensor accelerometer;
@@ -104,6 +106,7 @@ public class MainActivity extends Activity implements SensorEventListener {
         // Define a listener that responds to location updates
         locationListener = new LocationListener() {
             public void onLocationChanged(Location location) {
+            	Log.d("LocationChanged", location.getLatitude() + "," + location.getLongitude() +"  "+ location.getProvider());
             	updateLocation(location);
             }
 
@@ -128,7 +131,7 @@ public class MainActivity extends Activity implements SensorEventListener {
 					//because you will need to return from the function to handle the asynchronous operation, 
 					//but at that point the BroadcastReceiver is no longer active and thus the system is free 
 					//to kill its process before the asynchronous operation completes.
-					new SendStoredFilesTask().execute();	
+					new SendStoredFilesTask().execute();	// TODO: I think this leaks, as i get #asynctask1 with a ridiculous uptime and stime
 				}
 			}       	
         };
@@ -168,7 +171,9 @@ public class MainActivity extends Activity implements SensorEventListener {
     	return builder.create();
     }
     
-    
+    /**
+     * Shows an alert if GPS is disabled. 
+     */
     public void showSettingsAlert(){
     	String alert_text = "GPS is not enabled. Please enable GPS now.";
     	AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -214,7 +219,12 @@ public class MainActivity extends Activity implements SensorEventListener {
     }   
     
     public void updateLocation(Location location){
-    	this.location = location;
+    	long timeDelta = location.getTime() - this.location.getTime();
+    	boolean isSignificantlyNewer = timeDelta > ONE_MINUTE;
+    	boolean isMoreAccurate = (location.getAccuracy() - this.location.getAccuracy()) < 0;
+    	if(isMoreAccurate || isSignificantlyNewer){
+    		this.location = location;
+    	}
     }
 
     
@@ -229,7 +239,8 @@ public class MainActivity extends Activity implements SensorEventListener {
     	if(DEBUG) Log.d(DEBUG_TAG, ""+ on);
     	if(on){    		
     		// Register the listener with the Location Manager to receive location updates
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
+    		// change frequency depending on speed
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, LOC_UPDATE_FREQ, 0, locationListener); // you really need to duty cycle this every 2 minutes or something
             if(!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)){
             	showSettingsAlert();
             	((ToggleButton)view).setChecked(false);
@@ -245,6 +256,7 @@ public class MainActivity extends Activity implements SensorEventListener {
     		TextView t = (TextView)findViewById(R.id.speed);
     		t.setText("STOPPED");   		
     		sensorManager.unregisterListener(this);
+    		locationManager.removeUpdates(locationListener);
     		// Clear chart
     		//chart.clear();
     		
@@ -400,16 +412,21 @@ public class MainActivity extends Activity implements SensorEventListener {
 		// Record speed
 		// NOTE: Location might be outdated or null
 		//Location lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER); // or GPS_PROVIDER. Guess there might be a lot of wrong locations or nulls here.
-		String locationString = location.getLatitude() + "," + location.getLongitude(); 
+		String locationString = "";
+		if(location == null){
+			location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+		} 
+		if (location != null){
+			locationString = location.getLatitude() + "," + location.getLongitude(); 
+		}
 		long time = new Date().getTime();
-		//String dataPoint = "{\"location\":"+ location + ",\"speed\":"+ speed + ",\"time\":"+time +"}"; // Might just want the raw data without the nametags
 		String dataPoint ="";
 		try {
 			dataPoint = new JSONStringer().object()
 					.key("location")
 					.value(locationString)
 					.key("speed")
-					.value(new Float(shortSpeed)) //muligens lettere med int for map/reduce?
+					.value(Float.valueOf(shortSpeed))
 					.key("time")
 					.value(time)
 					.endObject()
@@ -441,7 +458,7 @@ public class MainActivity extends Activity implements SensorEventListener {
     		if(strings.length == 2){
     			db = strings[1];
     		} else {
-    			db = "loctests-thesis-" + new Date().getTime();
+    			db = "nathan-loctests-thesis-" + new Date().getTime();
     		}
     		boolean result;
 			try {
