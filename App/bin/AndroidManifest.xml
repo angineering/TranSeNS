@@ -5,7 +5,7 @@
     android:versionName="1.0" >
 
     <uses-sdk
-        android:minSdkVersion="9"
+        android:minSdkVersion="11"
         android:targetSdkVersion="17" />
     
     <uses-feature 
@@ -16,7 +16,6 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.INTERNET"/>
     
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.BATTERY_STATS"/>	<!-- Turning automatic sensing off when battery is low -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
@@ -46,11 +45,6 @@
             	<action android:name="android.net.conn.CONNECTIVITY_CHANGE"/>
             </intent-filter>           
         </receiver> -->
-        <service android:name="org.restclient" android:exported="true" android:enabled="true">
-    		<intent-filter>
-        		<action android:name="uk.co.computicake.angela.thesis.RESTClient" />
-    		</intent-filter>
-		</service>
     </application>
 	
     

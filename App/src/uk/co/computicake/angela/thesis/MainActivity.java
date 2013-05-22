@@ -1,6 +1,7 @@
 package uk.co.computicake.angela.thesis;
 
 // TODO implement threading. Doing too much wok on main thread!
+// TODO should really use Play location services, but can't figure out how the fuck to make them work >.> Wiki code won't run...
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -16,6 +17,7 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.location.Location;
+import android.location.LocationListener;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -23,8 +25,10 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.StrictMode;
+import android.provider.Settings;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.AlertDialog.Builder;
 import android.app.Dialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -44,6 +48,8 @@ import org.achartengine.model.Point;
 import org.json.JSONException;
 import org.json.JSONStringer;
 
+//import com.google.android.gms.location.LocationListener;
+
 
 public class MainActivity extends Activity implements SensorEventListener {
 	
@@ -56,6 +62,8 @@ public class MainActivity extends Activity implements SensorEventListener {
 	private ConnectivityManager connMgr;
 	private BroadcastReceiver receiver;
 	private LocationManager locationManager;
+	private LocationListener locationListener;
+	private Location location;
 	private final float NOISE = (float) 0.1; 
 	private String data = ""; // consider changing this to an array list 
 	
@@ -90,8 +98,24 @@ public class MainActivity extends Activity implements SensorEventListener {
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
         connMgr  = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
         initialiseChart();
-               
+         
+        // Define a listener that responds to location updates
+        locationListener = new LocationListener() {
+            public void onLocationChanged(Location location) {
+            	updateLocation(location);
+            }
+
+            public void onStatusChanged(String provider, int status, Bundle extras) {}
+
+            public void onProviderEnabled(String provider) {}
+
+            public void onProviderDisabled(String provider) {
+            	showSettingsAlert();
+            }
+          };
+        
         //Handles connectivity status notifications.
         // receiver = new ConnectivityReceiver();
         // registerReceiver(receiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION)); //without this is only picks up wifi state changed
@@ -144,6 +168,27 @@ public class MainActivity extends Activity implements SensorEventListener {
     	return builder.create();
     }
     
+    
+    public void showSettingsAlert(){
+    	String alert_text = "GPS is not enabled. Please enable GPS now.";
+    	AlertDialog.Builder builder = new AlertDialog.Builder(this);
+    	builder.setMessage(alert_text)
+    		.setPositiveButton("Settings", new DialogInterface.OnClickListener(){
+    			@Override
+    			public void onClick(DialogInterface dialog, int which) {
+    				Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+    				startActivity(intent);
+    			}   		
+    		})
+    		.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {				
+    			@Override
+				public void onClick(DialogInterface dialog, int which) {
+    				dialog.cancel();					
+				}
+			});
+    	builder.show();
+    }
+    
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -156,12 +201,23 @@ public class MainActivity extends Activity implements SensorEventListener {
     	switch (item.getItemId()){
     	case R.id.kill:
     		unregisterReceiver(receiver);
-    		sensorManager.unregisterListener(this, accelerometer);
+    		sensorManager.unregisterListener(this);
     		finish();
     	default:
     		return super.onOptionsItemSelected(item);
     	}
     }    
+    
+    public void onDestroy() {
+        super.onDestroy();
+        android.os.Process.killProcess(android.os.Process.myPid()); // For DEVELOPMENT ONLY
+    }   
+    
+    public void updateLocation(Location location){
+    	this.location = location;
+    }
+
+    
     
     /**
      * Tracks data on active, sends or stores data when turned off
@@ -171,12 +227,19 @@ public class MainActivity extends Activity implements SensorEventListener {
     	final String DEBUG_TAG = "Toggle Active";    	
     	boolean on = ((ToggleButton) view).isChecked();
     	if(DEBUG) Log.d(DEBUG_TAG, ""+ on);
-    	if(on){
-    		//Start tracking
+    	if(on){    		
+    		// Register the listener with the Location Manager to receive location updates
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
+            if(!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)){
+            	showSettingsAlert();
+            	((ToggleButton)view).setChecked(false);
+            	return;
+            }
+            //Start tracking
             sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
-          //  thread.start(); // was I using this for anything?
-           TextView tSpeed = (TextView)findViewById(R.id.speed);
-           tSpeed.setText("0.00");
+            //  thread.start(); // was I using this for anything?
+            TextView tSpeed = (TextView)findViewById(R.id.speed);
+            tSpeed.setText("0.00");
     	} else {
     		// Stop tracking and prepare to send data on WiFi connect
     		TextView t = (TextView)findViewById(R.id.speed);
@@ -336,15 +399,15 @@ public class MainActivity extends Activity implements SensorEventListener {
 		
 		// Record speed
 		// NOTE: Location might be outdated or null
-		Location lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER); // or GPS_PROVIDER. Guess there might be a lot of wrong locations or nulls here.
-		String location = lastKnownLocation.getLatitude() + "," + lastKnownLocation.getLongitude();
+		//Location lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER); // or GPS_PROVIDER. Guess there might be a lot of wrong locations or nulls here.
+		String locationString = location.getLatitude() + "," + location.getLongitude(); 
 		long time = new Date().getTime();
 		//String dataPoint = "{\"location\":"+ location + ",\"speed\":"+ speed + ",\"time\":"+time +"}"; // Might just want the raw data without the nametags
 		String dataPoint ="";
 		try {
 			dataPoint = new JSONStringer().object()
 					.key("location")
-					.value(location)
+					.value(locationString)
 					.key("speed")
 					.value(new Float(shortSpeed)) //muligens lettere med int for map/reduce?
 					.key("time")
@@ -378,7 +441,7 @@ public class MainActivity extends Activity implements SensorEventListener {
     		if(strings.length == 2){
     			db = strings[1];
     		} else {
-    			db = "thesis-" + new Date().getTime();
+    			db = "loctests-thesis-" + new Date().getTime();
     		}
     		boolean result;
 			try {
