@@ -17,15 +17,15 @@
         android:onClick="onToggleActive"
         android:textOff="Start Tracking"
         android:textOn="Stop Tracking" />
-
+    
     <TextView
         android:id="@+id/textView1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@+id/OnOff"
-        android:layout_marginTop="74dp"
-        android:layout_toLeftOf="@+id/OnOff"
-        android:text="Speed"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="79dp"
+        android:text="Acceleration"
         android:textAppearance="?android:attr/textAppearanceLarge" />
 
     <TextView
@@ -57,5 +57,26 @@
         android:layout_marginTop="83dp"
         android:orientation="horizontal" >
     </LinearLayout>
+
+    <TextView
+        android:id="@+id/textView2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/speed"
+        android:layout_marginRight="41dp"
+        android:layout_marginTop="18dp"
+        android:layout_toLeftOf="@+id/speed"
+        android:text="Activity"
+        android:textAppearance="?android:attr/textAppearanceLarge" />
+
+    <TextView
+        android:id="@+id/activity"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBaseline="@+id/textView2"
+        android:layout_alignBottom="@+id/textView2"
+        android:layout_toRightOf="@+id/speed"
+        android:text=""
+        android:textAppearance="?android:attr/textAppearanceLarge" />
 
 </RelativeLayout>

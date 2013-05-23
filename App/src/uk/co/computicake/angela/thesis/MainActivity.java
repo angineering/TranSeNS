@@ -1,7 +1,9 @@
 package uk.co.computicake.angela.thesis;
 
-// TODO implement threading. Doing too much wok on main thread!
+// TODO implement threading. Doing too much work on main thread!
 // TODO should really use Play location services, but can't figure out how the fuck to make them work >.> Wiki code won't run...
+// TODO add checks for checking that google play services is available
+// TODO have icon on status bar when running (since is supposed to be a background program really)
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -22,17 +24,21 @@ import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.IBinder;
 import android.os.StrictMode;
 import android.provider.Settings;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.AlertDialog.Builder;
 import android.app.Dialog;
+import android.app.IntentService;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.text.format.DateUtils;
 import android.util.Log;
 import android.view.Menu;
@@ -40,26 +46,33 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 import android.widget.ToggleButton;
 import org.achartengine.*;
 import org.achartengine.model.Point;
 import org.json.JSONException;
 import org.json.JSONStringer;
 
+
 import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.GooglePlayServicesClient;
+import com.google.android.gms.common.GooglePlayServicesClient.ConnectionCallbacks;
 import com.google.android.gms.common.GooglePlayServicesClient.OnConnectionFailedListener;
+/*
+import com.google.android.gms.location.ActivityRecognitionClient;
+import com.google.android.gms.location.ActivityRecognitionResult;
+import com.google.android.gms.location.DetectedActivity;
 import com.google.android.gms.location.LocationClient;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationListener; 
+*/
 
-//import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.*;
 
 
 public class MainActivity extends Activity implements 
 		SensorEventListener,
 		LocationListener,
-		GooglePlayServicesClient.ConnectionCallbacks,
+		ConnectionCallbacks,
 		OnConnectionFailedListener {
 	
 	private static final boolean DEVELOPER_MODE = true;
@@ -79,7 +92,11 @@ public class MainActivity extends Activity implements
 	private final float NOISE = (float) 0.1; 
 	private String data = ""; // consider changing this to an array list 
 	
-	private boolean locationUpdatesRequested; // off until user requests updates
+	//private boolean locationUpdatesRequested; // off until user requests updates
+	//private ActivityRecognitionClient activityClient; 
+	private ActivityRecognitionService boundActivityRecognitionService;
+	private ServiceConnection serviceConnection;
+	private boolean isBound = false;
 	
 	// Graph
 	private LinearLayout layout;
@@ -114,7 +131,7 @@ public class MainActivity extends Activity implements
         
         locationClient = new LocationClient(this, this, this);
 		locationClient.connect();
-		
+	
         initialiseChart();
       		
    		//Create location request
@@ -135,12 +152,27 @@ public class MainActivity extends Activity implements
 					//because you will need to return from the function to handle the asynchronous operation, 
 					//but at that point the BroadcastReceiver is no longer active and thus the system is free 
 					//to kill its process before the asynchronous operation completes.
-					new SendStoredFilesTask().execute();	// TODO: I think this leaks, as i get #asynctask1 with a ridiculous uptime and stime
+					//new SendStoredFilesTask().execute();	// TODO: I think this leaks, as i get #asynctask1 with a ridiculous uptime and stime
 				}
 			}       	
         };
         
-        // can go into one really
+        serviceConnection = new ServiceConnection() {
+			@Override
+			public void onServiceConnected(ComponentName name, IBinder service) {
+				boundActivityRecognitionService = ((ActivityRecognitionService.ActivityRecognitionBinder)service).getService();				
+				//For demo purposes
+				Toast.makeText(MainActivity.this, "Connected to activity recognition service", Toast.LENGTH_SHORT).show();			
+			}
+
+			@Override
+			public void onServiceDisconnected(ComponentName name) {
+				boundActivityRecognitionService = null;
+				Toast.makeText(MainActivity.this, "Disconnected from activity recognition service ", Toast.LENGTH_SHORT).show();				
+			}      		
+        };
+        
+        // can go into one really. Fore registering the broadcast receiver.
         IntentFilter i = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
         registerReceiver(receiver,i);
         
@@ -209,17 +241,21 @@ public class MainActivity extends Activity implements
     public boolean onOptionsItemSelected(MenuItem item){
     	switch (item.getItemId()){
     	case R.id.kill:
-    		unregisterReceiver(receiver);
-    		sensorManager.unregisterListener(this);
+    		//unregisterReceiver(receiver);
+    		//sensorManager.unregisterListener(this);
     		finish();
     	default:
     		return super.onOptionsItemSelected(item);
     	}
     }    
     
+    // last thing called after finish 
     public void onDestroy() {
-    	locationClient.disconnect();
         super.onDestroy();
+        locationClient.disconnect();
+        sensorManager.unregisterListener(this);
+        unregisterReceiver(receiver);
+        doUnbindService();
         android.os.Process.killProcess(android.os.Process.myPid()); // For DEVELOPMENT ONLY
     }   
     
@@ -247,18 +283,23 @@ public class MainActivity extends Activity implements
     		locationClient.requestLocationUpdates(locationRequest, this);           
             //Start tracking
             sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
-            //  thread.start(); // was I using this for anything?
+            doBindService();
+
             TextView tSpeed = (TextView)findViewById(R.id.speed);
             tSpeed.setText("0.00");
+            TextView tActivity = (TextView)findViewById(R.id.activity);
+            tActivity.setText("Unknown");
     	} else {
     		// Stop tracking and prepare to send data on WiFi connect
     		TextView t = (TextView)findViewById(R.id.speed);
-    		t.setText("STOPPED");   		
+    		t.setText("STOPPED"); 
+    		TextView tActivity = (TextView)findViewById(R.id.activity);
+            tActivity.setText("");
     		sensorManager.unregisterListener(this);
     		locationClient.removeLocationUpdates(this);
     		// Clear chart
     		//chart.clear();
-    		
+    		doUnbindService();
        		if(wifiConnected()){
        			sendCurrentData();
        		} else {
@@ -411,6 +452,10 @@ public class MainActivity extends Activity implements
 		// Record speed
 		// NOTE: Location might be outdated or null
 		//Location lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER); // or GPS_PROVIDER. Guess there might be a lot of wrong locations or nulls here.
+		DetectedActivity activity = boundActivityRecognitionService.getActivity();
+		TextView tActivity = (TextView)findViewById(R.id.activity);
+        tActivity.setText(activity.toString());
+		
 		String locationString = "";
 		if (location == null){
 			 //get latest known location useful when you need location quickly
@@ -528,7 +573,33 @@ public class MainActivity extends Activity implements
 		this.location = location;
 		
 	}
+	
+	void doBindService(){
+		bindService(new Intent(this, ActivityRecognitionService.class), serviceConnection, BIND_AUTO_CREATE);
+		//isBound = true;
+	}
+	
+	void doUnbindService(){
+		if(isBound){
+			unbindService(serviceConnection);
+			isBound = false;
+		}
+		
+		
+	}
 
-
-    
+	/*
+	private class ActivityIntentService extends IntentService{
+		DetectedActivity activity;
+		
+		public ActivityIntentService(String name) {
+			super(name);
+		}
+		protected void onHandleIntent(Intent intent) {
+		     if (ActivityRecognitionResult.hasResult(intent)) {
+		    	 ActivityRecognitionResult result = ActivityRecognitionResult.extractResult(intent);
+		         activity = result.getMostProbableActivity();
+		     }
+		}
+	}*/
 }
