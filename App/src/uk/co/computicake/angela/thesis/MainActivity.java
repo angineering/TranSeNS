@@ -17,8 +17,6 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.location.Location;
-import android.location.LocationListener;
-import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
@@ -48,26 +46,40 @@ import org.achartengine.model.Point;
 import org.json.JSONException;
 import org.json.JSONStringer;
 
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GooglePlayServicesClient;
+import com.google.android.gms.common.GooglePlayServicesClient.OnConnectionFailedListener;
+import com.google.android.gms.location.LocationClient;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationListener; 
+
 //import com.google.android.gms.location.LocationListener;
 
 
-public class MainActivity extends Activity implements SensorEventListener {
+public class MainActivity extends Activity implements 
+		SensorEventListener,
+		LocationListener,
+		GooglePlayServicesClient.ConnectionCallbacks,
+		OnConnectionFailedListener {
 	
 	private static final boolean DEVELOPER_MODE = true;
 	private static final boolean DEBUG = false;
 	private static final boolean WARN = true;
 	private static final int ONE_MINUTE = 60*1000;
 	private static final int LOC_UPDATE_FREQ = 6*1000;
+	private static final String LOC_SRV = "Location Services";
 	
 	private SensorManager sensorManager;
 	private Sensor accelerometer;
 	private ConnectivityManager connMgr;
 	private BroadcastReceiver receiver;
-	private LocationManager locationManager;
-	private LocationListener locationListener;
-	private Location location;
+	protected LocationClient locationClient;
+	protected Location location;
+	private LocationRequest locationRequest;
 	private final float NOISE = (float) 0.1; 
 	private String data = ""; // consider changing this to an array list 
+	
+	private boolean locationUpdatesRequested; // off until user requests updates
 	
 	// Graph
 	private LinearLayout layout;
@@ -99,26 +111,18 @@ public class MainActivity extends Activity implements SensorEventListener {
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
         connMgr  = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-        initialiseChart();
-         
-        // Define a listener that responds to location updates
-        locationListener = new LocationListener() {
-            public void onLocationChanged(Location location) {
-            	Log.d("LocationChanged", location.getLatitude() + "," + location.getLongitude() +"  "+ location.getProvider());
-            	updateLocation(location);
-            }
-
-            public void onStatusChanged(String provider, int status, Bundle extras) {}
-
-            public void onProviderEnabled(String provider) {}
-
-            public void onProviderDisabled(String provider) {
-            	showSettingsAlert();
-            }
-          };
         
+        locationClient = new LocationClient(this, this, this);
+		locationClient.connect();
+		
+        initialiseChart();
+      		
+   		//Create location request
+      	locationRequest = LocationRequest.create()
+      		.setInterval(5000).setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+               
+      	locationUpdatesRequested = false;
+      	
         //Handles connectivity status notifications.
         // receiver = new ConnectivityReceiver();
         // registerReceiver(receiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION)); //without this is only picks up wifi state changed
@@ -131,7 +135,7 @@ public class MainActivity extends Activity implements SensorEventListener {
 					//because you will need to return from the function to handle the asynchronous operation, 
 					//but at that point the BroadcastReceiver is no longer active and thus the system is free 
 					//to kill its process before the asynchronous operation completes.
-					new SendStoredFilesTask().execute();	// TODO: I think this leaks, as i get #asynctask1 with a ridiculous uptime and stime
+					//new SendStoredFilesTask().execute();	// TODO: I think this leaks, as i get #asynctask1 with a ridiculous uptime and stime
 				}
 			}       	
         };
@@ -214,6 +218,7 @@ public class MainActivity extends Activity implements SensorEventListener {
     }    
     
     public void onDestroy() {
+    	locationClient.disconnect();
         super.onDestroy();
         android.os.Process.killProcess(android.os.Process.myPid()); // For DEVELOPMENT ONLY
     }   
@@ -238,14 +243,8 @@ public class MainActivity extends Activity implements SensorEventListener {
     	boolean on = ((ToggleButton) view).isChecked();
     	if(DEBUG) Log.d(DEBUG_TAG, ""+ on);
     	if(on){    		
-    		// Register the listener with the Location Manager to receive location updates
-    		// change frequency depending on speed
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, LOC_UPDATE_FREQ, 0, locationListener); // you really need to duty cycle this every 2 minutes or something
-            if(!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)){
-            	showSettingsAlert();
-            	((ToggleButton)view).setChecked(false);
-            	return;
-            }
+    		//request updates
+    		locationClient.requestLocationUpdates(locationRequest, this);           
             //Start tracking
             sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
             //  thread.start(); // was I using this for anything?
@@ -256,12 +255,12 @@ public class MainActivity extends Activity implements SensorEventListener {
     		TextView t = (TextView)findViewById(R.id.speed);
     		t.setText("STOPPED");   		
     		sensorManager.unregisterListener(this);
-    		locationManager.removeUpdates(locationListener);
+    		locationClient.removeLocationUpdates(this);
     		// Clear chart
     		//chart.clear();
     		
        		if(wifiConnected()){
-       			sendCurrentData();
+       		//	sendCurrentData();
        		} else {
        			storeData();
        		}
@@ -413,9 +412,10 @@ public class MainActivity extends Activity implements SensorEventListener {
 		// NOTE: Location might be outdated or null
 		//Location lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER); // or GPS_PROVIDER. Guess there might be a lot of wrong locations or nulls here.
 		String locationString = "";
-		if(location == null){
-			location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-		} 
+		if (location == null){
+			 //get latest known location useful when you need location quickly
+	      	location = locationClient.getLastLocation();
+		}
 		if (location != null){
 			locationString = location.getLatitude() + "," + location.getLongitude(); 
 		}
@@ -503,5 +503,32 @@ public class MainActivity extends Activity implements SensorEventListener {
 		}
     	
     }
+
+	@Override
+	public void onConnectionFailed(ConnectionResult result) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void onConnected(Bundle connectionHint) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void onDisconnected() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void onLocationChanged(Location location) {
+		Log.i(LOC_SRV, "Received a new location "+location);
+		this.location = location;
+		
+	}
+
+
     
 }
