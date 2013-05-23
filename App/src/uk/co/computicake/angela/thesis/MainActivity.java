@@ -119,9 +119,9 @@ public class MainActivity extends Activity implements
       		
    		//Create location request
       	locationRequest = LocationRequest.create()
-      		.setInterval(5000).setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+      		.setInterval(6000).setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
                
-      	locationUpdatesRequested = false;
+      	//locationUpdatesRequested = false;
       	
         //Handles connectivity status notifications.
         // receiver = new ConnectivityReceiver();
@@ -135,7 +135,7 @@ public class MainActivity extends Activity implements
 					//because you will need to return from the function to handle the asynchronous operation, 
 					//but at that point the BroadcastReceiver is no longer active and thus the system is free 
 					//to kill its process before the asynchronous operation completes.
-					//new SendStoredFilesTask().execute();	// TODO: I think this leaks, as i get #asynctask1 with a ridiculous uptime and stime
+					new SendStoredFilesTask().execute();	// TODO: I think this leaks, as i get #asynctask1 with a ridiculous uptime and stime
 				}
 			}       	
         };
@@ -260,7 +260,7 @@ public class MainActivity extends Activity implements
     		//chart.clear();
     		
        		if(wifiConnected()){
-       		//	sendCurrentData();
+       			sendCurrentData();
        		} else {
        			storeData();
        		}
@@ -458,7 +458,7 @@ public class MainActivity extends Activity implements
     		if(strings.length == 2){
     			db = strings[1];
     		} else {
-    			db = "nathan-loctests-thesis-" + new Date().getTime();
+    			db = "loctests-thesis-" + new Date().getTime();
     		}
     		boolean result;
 			try {
