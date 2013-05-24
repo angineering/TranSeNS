@@ -57,6 +57,7 @@ import org.json.JSONStringer;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesClient.ConnectionCallbacks;
 import com.google.android.gms.common.GooglePlayServicesClient.OnConnectionFailedListener;
+import com.google.android.gms.common.GooglePlayServicesUtil;
 /*
 import com.google.android.gms.location.ActivityRecognitionClient;
 import com.google.android.gms.location.ActivityRecognitionResult;
@@ -157,6 +158,12 @@ public class MainActivity extends Activity implements
 			}       	
         };
         
+        int playAvailable = GooglePlayServicesUtil.isGooglePlayServicesAvailable(this);
+        // SUCCESS = 0
+        if(playAvailable != 0){
+        	GooglePlayServicesUtil.getErrorDialog(playAvailable, this, 0).show();
+        }
+        
         serviceConnection = new ServiceConnection() {
 			@Override
 			public void onServiceConnected(ComponentName name, IBinder service) {
@@ -181,8 +188,8 @@ public class MainActivity extends Activity implements
         	missingSensorAlert().show();
         }
     }
-    
-    //mainly for debugging purposes
+
+	//mainly for debugging purposes
     private void initialiseChart(){
     	chart  = new AccelerationTimeChart();
     	layout = (LinearLayout) findViewById(R.id.chart);
@@ -443,8 +450,10 @@ public class MainActivity extends Activity implements
 		// NOTE: Location might be outdated or null
 		//Location lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER); // or GPS_PROVIDER. Guess there might be a lot of wrong locations or nulls here.
 		DetectedActivity activity = ActivityRecognitionService.ACTIVITY;
+		String activityName = getNameFromType(activity.getType());
+		int activityConfidence = activity.getConfidence();
 		TextView tActivity = (TextView)findViewById(R.id.activity);
-        tActivity.setText(getNameFromType(activity.getType())+"  "+activity.getConfidence());
+        tActivity.setText(activityName + "  "+ activityConfidence);
 		
 		String locationString = "";
 		if (location == null){
@@ -464,6 +473,10 @@ public class MainActivity extends Activity implements
 					.value(Float.valueOf(shortSpeed))
 					.key("time")
 					.value(time)
+					.key("activityName")
+					.value(activityName)
+					.key("activityConfidence") // not entirely sure that this is necessary
+					.value(activityConfidence)
 					.endObject()
 					.toString();
 		} catch (JSONException e) {
@@ -566,7 +579,7 @@ public class MainActivity extends Activity implements
 	
 	void doBindService(){
 		bindService(new Intent(this, ActivityRecognitionService.class), serviceConnection, BIND_AUTO_CREATE);
-		//isBound = true;
+		isBound = true;
 	}
 	
 	void doUnbindService(){

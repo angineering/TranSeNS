@@ -3,6 +3,7 @@ package uk.co.computicake.angela.thesis;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesClient.ConnectionCallbacks;
 import com.google.android.gms.common.GooglePlayServicesClient.OnConnectionFailedListener;
+import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.location.ActivityRecognitionClient;
 import com.google.android.gms.location.ActivityRecognitionResult;
 import com.google.android.gms.location.DetectedActivity;
@@ -14,6 +15,7 @@ import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentSender.SendIntentException;
 import android.location.Location;
 import android.os.Binder;
 import android.os.Bundle;
@@ -37,8 +39,11 @@ public class ActivityRecognitionService extends Service implements
 	private ActivityIntentReceiver resultReceiver = new ActivityIntentReceiver(null);
 	private final boolean DEBUG = true;
 	private final int DETECTION_INTERVAL_MS = 20000;
+	private final static int CONNECTION_FAILURE_RESOLUTION_REQUEST = 9000;
 	protected final static String RESULT_RECEIVER = "uk.co.computicake.angela.thesis.RESULT_RECEIVER";
+	
 	public static DetectedActivity ACTIVITY;
+	
 
 	
 	// The object that receives interaction from clients. (See RemoteService for a more complete example)
@@ -90,7 +95,6 @@ public class ActivityRecognitionService extends Service implements
 	@Override
 	public void onConnectionFailed(ConnectionResult result) {
 		Log.w(TAG, "Connection failed");
-		
 	}
 	
 	
