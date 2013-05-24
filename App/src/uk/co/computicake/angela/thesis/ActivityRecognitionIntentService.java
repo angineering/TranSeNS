@@ -22,12 +22,14 @@ public class ActivityRecognitionIntentService extends IntentService {
 	
 	protected void onHandleIntent(Intent intent) {
 		if(DEBUG) Log.d(TAG, "handle intent");
+		//ResultReceiver receiver = intent.getParcelableExtra(ActivityRecognitionService.RESULT_RECEIVER);   
 	     if (ActivityRecognitionResult.hasResult(intent)) {
 	    	 ActivityRecognitionResult result = ActivityRecognitionResult.extractResult(intent);
 	    	 if(DEBUG) Log.d(TAG, "Intent result:"+result);
 	         DetectedActivity activity = result.getMostProbableActivity();
-	         //setActivity(activity);
-	         /*ResultReceiver receiver = intent.getParcelableExtra("receiver");
+	         ActivityRecognitionService.ACTIVITY = activity; // OK so this techinically works, and is mentioned as a way of doing it, but I really don't like it. 
+	         /*
+	         
 	         Bundle bundle = new Bundle();
 	         bundle.putParcelable("activity", activity);
 	         // 1 for testing

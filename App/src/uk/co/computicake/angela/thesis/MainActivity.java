@@ -442,7 +442,7 @@ public class MainActivity extends Activity implements
 		// Record speed
 		// NOTE: Location might be outdated or null
 		//Location lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER); // or GPS_PROVIDER. Guess there might be a lot of wrong locations or nulls here.
-		DetectedActivity activity = boundActivityRecognitionService.getActivity();
+		DetectedActivity activity = ActivityRecognitionService.ACTIVITY;
 		TextView tActivity = (TextView)findViewById(R.id.activity);
         tActivity.setText(getNameFromType(activity.getType())+"  "+activity.getConfidence());
 		

@@ -37,7 +37,8 @@ public class ActivityRecognitionService extends Service implements
 	private ActivityIntentReceiver resultReceiver = new ActivityIntentReceiver(null);
 	private final boolean DEBUG = true;
 	private final int DETECTION_INTERVAL_MS = 20000;
-	private final static String RESULT_RECEIVER = "uk.co.computicake.angela.thesis.RESULT_RECEIVER";
+	protected final static String RESULT_RECEIVER = "uk.co.computicake.angela.thesis.RESULT_RECEIVER";
+	public static DetectedActivity ACTIVITY;
 
 	
 	// The object that receives interaction from clients. (See RemoteService for a more complete example)
@@ -45,16 +46,17 @@ public class ActivityRecognitionService extends Service implements
 
 	@Override
 	public void onConnected(Bundle connectionHint) {
-		Intent intent = new Intent(this, ActivityRecognitionIntentService.class);
+		Intent intent = new Intent(ActivityRecognitionService.this, ActivityRecognitionIntentService.class);
 		// name MUST include a package prefix!
-		//intent.putExtra(RESULT_RECEIVER, resultReceiver);
+		//intent.putExtra(ActivityRecognitionService.RESULT_RECEIVER, resultReceiver); //whyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
 	    callbackIntent = PendingIntent.getService(this, 0, intent,
-	             PendingIntent.FLAG_UPDATE_CURRENT);
+	             PendingIntent.FLAG_UPDATE_CURRENT);	    
 	    activityClient.requestActivityUpdates(DETECTION_INTERVAL_MS, callbackIntent);		// should be seldom, say every 6 minutes
 	    if(DEBUG) Log.d(TAG, "connected");	    
 	}
 	
 	public void onCreate(){
+		ACTIVITY = new DetectedActivity(DetectedActivity.UNKNOWN, 0);
 		activity = new DetectedActivity(DetectedActivity.UNKNOWN, 0);
 		activityClient = new ActivityRecognitionClient(this, this, this);
 		activityClient.connect();
