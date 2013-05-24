@@ -11,16 +11,20 @@ import android.app.IntentService;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.location.Location;
 import android.os.Binder;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.ResultReceiver;
 import android.util.Log;
 
 // NOTE: When binding to a service onStartCommand is not used. This is only used when starting a service.
 // consider using startForeground(int, Notification) if you're worried about service possibly getting killed
+// TODO: contemplate doing something on unbind
 
 public class ActivityRecognitionService extends Service implements 	
 	ConnectionCallbacks,
@@ -29,18 +33,25 @@ public class ActivityRecognitionService extends Service implements
 	private ActivityRecognitionClient activityClient;
 	private DetectedActivity activity;
 	private String TAG = "ActivityRecognitionService";
+	private PendingIntent callbackIntent; 
+	private ActivityIntentReceiver resultReceiver = new ActivityIntentReceiver(null);
 	private final boolean DEBUG = true;
+	private final int DETECTION_INTERVAL_MS = 20000;
+	private final static String RESULT_RECEIVER = "uk.co.computicake.angela.thesis.RESULT_RECEIVER";
+
 	
 	// The object that receives interaction from clients. (See RemoteService for a more complete example)
 	private final IBinder binder = new ActivityRecognitionBinder();
 
 	@Override
 	public void onConnected(Bundle connectionHint) {
-		Intent intent = new Intent(this, ActivityIntentService.class);
-	     PendingIntent callbackIntent = PendingIntent.getService(this, 0, intent,
+		Intent intent = new Intent(this, ActivityRecognitionIntentService.class);
+		// name MUST include a package prefix!
+		//intent.putExtra(RESULT_RECEIVER, resultReceiver);
+	    callbackIntent = PendingIntent.getService(this, 0, intent,
 	             PendingIntent.FLAG_UPDATE_CURRENT);
-	     activityClient.requestActivityUpdates(6000, callbackIntent);		// should be seldom, say every 6 minutes
-	     if(DEBUG) Log.d(TAG, "connected");
+	    activityClient.requestActivityUpdates(DETECTION_INTERVAL_MS, callbackIntent);		// should be seldom, say every 6 minutes
+	    if(DEBUG) Log.d(TAG, "connected");	    
 	}
 	
 	public void onCreate(){
@@ -53,6 +64,7 @@ public class ActivityRecognitionService extends Service implements
 	
 	@Override
 	public void onDisconnected() {
+		this.stopSelf();
 		// TODO Auto-generated method stub
 		
 	}
@@ -66,29 +78,20 @@ public class ActivityRecognitionService extends Service implements
 	public IBinder onBind(Intent i) {
 		return binder;
 	}
-
+	
+	public boolean onUnbind(Intent i){
+		if(DEBUG) Log.d(TAG, "unbound");
+		activityClient.removeActivityUpdates(callbackIntent);		
+		return true;		
+	}
+	
 	@Override
 	public void onConnectionFailed(ConnectionResult result) {
 		Log.w(TAG, "Connection failed");
 		
 	}
 	
-	public class ActivityIntentService extends IntentService{
-		
-		public ActivityIntentService(String name) {
-			super(name);					
-		}
-		
-		protected void onHandleIntent(Intent intent) {
-			Log.d(TAG, "handle intent");
-		     if (ActivityRecognitionResult.hasResult(intent)) {
-		    	 ActivityRecognitionResult result = ActivityRecognitionResult.extractResult(intent);
-		         DetectedActivity activity = result.getMostProbableActivity();
-		         setActivity(activity);
-		     }
-		}
-		
-	}
+	
 	
 	private void setActivity(DetectedActivity activity){
 		Log.d(TAG, activity.toString());
@@ -108,6 +111,20 @@ public class ActivityRecognitionService extends Service implements
 		ActivityRecognitionService getService(){
 			return ActivityRecognitionService.this;
 		}
+	}
+	
+	public class ActivityIntentReceiver extends ResultReceiver {
+		
+		public ActivityIntentReceiver(Handler handler) {
+			super(handler);
+		}
+		
+		@Override
+		protected void onReceiveResult(int resultCode, Bundle resultData){
+			DetectedActivity activity = resultData.getParcelable("activity");
+			setActivity(activity);
+		}
+		
 	}
 
 }

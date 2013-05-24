@@ -136,7 +136,7 @@ public class MainActivity extends Activity implements
       		
    		//Create location request
       	locationRequest = LocationRequest.create()
-      		.setInterval(6000).setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+      		.setInterval(10000).setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
                
       	//locationUpdatesRequested = false;
       	
@@ -152,7 +152,7 @@ public class MainActivity extends Activity implements
 					//because you will need to return from the function to handle the asynchronous operation, 
 					//but at that point the BroadcastReceiver is no longer active and thus the system is free 
 					//to kill its process before the asynchronous operation completes.
-					//new SendStoredFilesTask().execute();	// TODO: I think this leaks, as i get #asynctask1 with a ridiculous uptime and stime
+					//new SendStoredFilesTask().execute();	// TODO: I think this leaks, as i get #asynctask1 with a ridiculous uptime and stime. THIS IS THE DEVIL
 				}
 			}       	
         };
@@ -168,7 +168,7 @@ public class MainActivity extends Activity implements
 			@Override
 			public void onServiceDisconnected(ComponentName name) {
 				boundActivityRecognitionService = null;
-				Toast.makeText(MainActivity.this, "Disconnected from activity recognition service ", Toast.LENGTH_SHORT).show();				
+				Toast.makeText(MainActivity.this, "Disconnected from activity recognition service ", Toast.LENGTH_SHORT).show(); // Don't really see this pop up				
 			}      		
         };
         
@@ -258,16 +258,6 @@ public class MainActivity extends Activity implements
         doUnbindService();
         android.os.Process.killProcess(android.os.Process.myPid()); // For DEVELOPMENT ONLY
     }   
-    
-    public void updateLocation(Location location){
-    	long timeDelta = location.getTime() - this.location.getTime();
-    	boolean isSignificantlyNewer = timeDelta > ONE_MINUTE;
-    	boolean isMoreAccurate = (location.getAccuracy() - this.location.getAccuracy()) < 0;
-    	if(isMoreAccurate || isSignificantlyNewer){
-    		this.location = location;
-    	}
-    }
-
     
     
     /**
@@ -454,7 +444,7 @@ public class MainActivity extends Activity implements
 		//Location lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER); // or GPS_PROVIDER. Guess there might be a lot of wrong locations or nulls here.
 		DetectedActivity activity = boundActivityRecognitionService.getActivity();
 		TextView tActivity = (TextView)findViewById(R.id.activity);
-        tActivity.setText(activity.toString());
+        tActivity.setText(getNameFromType(activity.getType())+"  "+activity.getConfidence());
 		
 		String locationString = "";
 		if (location == null){
@@ -583,23 +573,31 @@ public class MainActivity extends Activity implements
 		if(isBound){
 			unbindService(serviceConnection);
 			isBound = false;
-		}
-		
-		
+		}	
 	}
+	
+	/**
+     * Map detected activity types to strings
+     *
+     * @param activityType The detected activity type
+     * @return A user-readable name for the type
+     */
+    private String getNameFromType(int activityType) {
+        switch(activityType) {
+            case DetectedActivity.IN_VEHICLE:
+                return "in vehicle";
+            case DetectedActivity.ON_BICYCLE:
+                return "cycling";
+            case DetectedActivity.ON_FOOT:
+                return "walking";
+            case DetectedActivity.STILL:
+                return "still";
+            case DetectedActivity.UNKNOWN:
+                return "unknown";
+            case DetectedActivity.TILTING:
+                return "tilting";
+        }
+        return "unknown";
+    }
 
-	/*
-	private class ActivityIntentService extends IntentService{
-		DetectedActivity activity;
-		
-		public ActivityIntentService(String name) {
-			super(name);
-		}
-		protected void onHandleIntent(Intent intent) {
-		     if (ActivityRecognitionResult.hasResult(intent)) {
-		    	 ActivityRecognitionResult result = ActivityRecognitionResult.extractResult(intent);
-		         activity = result.getMostProbableActivity();
-		     }
-		}
-	}*/
 }
