@@ -1,5 +1,7 @@
 package uk.co.computicake.angela.thesis;
 
+import com.google.android.gms.location.DetectedActivity;
+
 public final class Utils {
 	
 	protected static final boolean DEVELOPER_MODE = true;
@@ -17,4 +19,28 @@ public final class Utils {
 	protected static final String LOCATION = "uk.co.computicake.angela.thesis.LOCATION";
 	protected static final String DATA = "uk.co.computicake.angela.thesis.DATA";
 	
+	
+	/**
+     * Map detected activity types to strings
+     *
+     * @param activityType The detected activity type
+     * @return A user-readable name for the type
+     */
+    public static String getNameFromType(int activityType) {
+        switch(activityType) {
+            case DetectedActivity.IN_VEHICLE:
+                return "in vehicle";
+            case DetectedActivity.ON_BICYCLE:
+                return "cycling";
+            case DetectedActivity.ON_FOOT:
+                return "walking";
+            case DetectedActivity.STILL:
+                return "still";
+            case DetectedActivity.UNKNOWN: //is this really necessary when default is unknown?
+                return "unknown";
+            case DetectedActivity.TILTING:
+                return "tilting";
+        }
+        return "unknown";
+    }
 }

@@ -91,8 +91,7 @@ public class MainActivity extends Activity implements
 	private final float NOISE = (float) 0.1; 
 	protected static String data = ""; // consider changing this to an array list. also do this in a nicer way than a static.
 	
-	//private boolean locationUpdatesRequested; // off until user requests updates
-	//private ActivityRecognitionClient activityClient; 
+	private DetectedActivity oldActivity;
 	
 	private ServiceConnection serviceConnection;
 	private boolean isBound = false;
@@ -186,6 +185,7 @@ public class MainActivity extends Activity implements
         if(accelerometer == null){       	
         	missingSensorAlert().show();
         }
+        
     }
 
 	//mainly for debugging purposes
@@ -280,11 +280,11 @@ public class MainActivity extends Activity implements
             //Start tracking
             sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
             doBindService();
-
+            oldActivity = ActivityRecognitionService.ACTIVITY;
             TextView tAccel = (TextView)findViewById(R.id.speed);
             tAccel.setText("0.00");
             TextView tActivity = (TextView)findViewById(R.id.activity);
-            tActivity.setText("Unknown");
+            tActivity.setText("Unknown 0");
     	} else {
     		// Stop tracking and prepare to send data on WiFi connect
     		TextView t = (TextView)findViewById(R.id.speed);
@@ -363,7 +363,7 @@ public class MainActivity extends Activity implements
     /**
      * Wrapper for storing recorded data
      */
-    private void storeData(){
+    protected void storeData(){
     	String filename = "thesis-" +new Date().getTime();
     	Log.v("Storing", filename);
     	storeInternally(filename);
@@ -435,6 +435,7 @@ public class MainActivity extends Activity implements
 	
 	//TODO: You are doing waaaaay too much in here!
 	// it seems GC_FOR_ALLOC happens (more often?) when the phone is not moved (actually it's hardly coming up at all this run when still), which signifies that there is too much going on here. try piping some off to other functions or services.
+	// Recording of data moved to intent service and do a check for activity, but there's still a LOT of GC_FOR_ALLOC that happens as soon as the phone is moved. I think more stuff has to be moved :/ 
 	@Override
 	public void onSensorChanged(SensorEvent event) {
 		final String DEBUG_TAG = "Sensor Changed";
@@ -455,24 +456,24 @@ public class MainActivity extends Activity implements
 			tAccel.setText("0.00");
 			return;
 		}
-		shortAccel= d.format(accel);
-		accel = Float.valueOf(shortAccel); 
+		shortAccel = d.format(accel);
 		tAccel.setText(shortAccel);
 		if (DEBUG) Log.d(DEBUG_TAG, "Acceleration: "+ shortAccel);
+
+		// Add speed to the graph
+		Point p = new Point(pos++, (float)accel);
+		chart.addNewPoints(p);
+		chart.adjust_x((int)pos);
+		view.repaint();  //commenting this out still gave quite a few GC_FOR_ALLOC
 		
-		
-		// Recording data should prolly be a separate intentservice or something.
-		// Record speed
-		// NOTE: Location might be outdated or null
-		//Location lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER); // or GPS_PROVIDER. Guess there might be a lot of wrong locations or nulls here.
-		// yep. plenty of GC_FOR_ALLOC as soon as the phone is moved. 
-		/*
-		DetectedActivity activity = ActivityRecognitionService.ACTIVITY;
-		String activityName = getNameFromType(activity.getType());
-		int activityConfidence = activity.getConfidence();
-		TextView tActivity = (TextView)findViewById(R.id.activity);
-        tActivity.setText(activityName + "  "+ activityConfidence);
-		*/
+		DetectedActivity newActivity = ActivityRecognitionService.ACTIVITY;
+		if(!newActivity.equals(oldActivity)){
+			DetectedActivity activity = ActivityRecognitionService.ACTIVITY;
+			String activityName = Utils.getNameFromType(activity.getType());
+			int activityConfidence = activity.getConfidence();
+			TextView tActivity = (TextView)findViewById(R.id.activity);
+	        tActivity.setText(activityName + "  "+ activityConfidence);	
+		}
 		String locationString = "";
 		if (location == null){
 			 //get latest known location useful when you need location quickly
@@ -480,49 +481,13 @@ public class MainActivity extends Activity implements
 		}
 		if (location != null){
 			locationString = location.getLatitude() + "," + location.getLongitude(); 
-		}/*
-		long time = new Date().getTime();
-		String dataPoint ="";
-		try {
-			dataPoint = new JSONStringer().object()
-					.key("location")
-					.value(locationString)
-					.key("acceleration")
-					.value(Float.valueOf(shortSpeed))
-					.key("time")
-					.value(time)
-					.key("activityName")
-					.value(activityName)
-					.key("activityConfidence") // not entirely sure that this is necessary
-					.value(activityConfidence)
-					.endObject()
-					.toString();
-		} catch (JSONException e) {
-			e.printStackTrace();
 		}
-		if (DEBUG) Log.d("dataPoint", dataPoint);
-		data = data.concat(dataPoint +","); //really want to comma separate. maybe use json object? try and see if it breaks		
-		*/
-		// Add speed to the graph
-		Point p = new Point(pos++, (float)accel);
-		chart.addNewPoints(p);
-		chart.adjust_x((int)pos);
-		view.repaint();
-		
-		DetectedActivity activity = ActivityRecognitionService.ACTIVITY;
-		String activityName = getNameFromType(activity.getType());
-		int activityConfidence = activity.getConfidence();
-		TextView tActivity = (TextView)findViewById(R.id.activity);
-        tActivity.setText(activityName + "  "+ activityConfidence);
-		
-		
-		
+        
+		Intent intent = new Intent(MainActivity.this, RecordDataIntentService.class);
+		intent.putExtra(Utils.ACCELERATION, shortAccel);
+		intent.putExtra(Utils.LOCATION, locationString);
+		startService(intent);				
 	}
-	
-    protected void onStop(){
-    	super.onStop();
-    	
-    }
     
     /*
     private class UploadFilesTask extends AsyncTask<String, Void, Boolean> { //if you make this into a service it has higher priority and is less likely to be killed by the os.
@@ -558,27 +523,7 @@ public class MainActivity extends Activity implements
     	}
 
     }*/
-    /*
-    private class SendStoredFilesTask extends AsyncTask<Void, Void, String[]>{
 
-		@Override
-		protected String[] doInBackground(Void... params) {
-    		// upload data to server using RESTClient
-    		String[] fileTuple = findFile();    		     		
-			return fileTuple;
-		}
-		protected void onPostExecute(String[] response){
-			String[] fileTuple = response;
-			if(fileTuple != null){
-    			new UploadFilesTask().execute(fileTuple[1], fileTuple[0]); 
-    			deleteFile(fileTuple[0]);
-    		} else {
-    			Log.d("SendStored", "No stored files to send");
-    		}
-		}
-    	
-    }
-*/
 	@Override
 	public void onConnectionFailed(ConnectionResult result) {
 		// TODO Auto-generated method stub
@@ -615,29 +560,5 @@ public class MainActivity extends Activity implements
 			isBound = false;
 		}	
 	}
-	
-	/**
-     * Map detected activity types to strings
-     *
-     * @param activityType The detected activity type
-     * @return A user-readable name for the type
-     */
-    private String getNameFromType(int activityType) {
-        switch(activityType) {
-            case DetectedActivity.IN_VEHICLE:
-                return "in vehicle";
-            case DetectedActivity.ON_BICYCLE:
-                return "cycling";
-            case DetectedActivity.ON_FOOT:
-                return "walking";
-            case DetectedActivity.STILL:
-                return "still";
-            case DetectedActivity.UNKNOWN:
-                return "unknown";
-            case DetectedActivity.TILTING:
-                return "tilting";
-        }
-        return "unknown";
-    }
 
 }

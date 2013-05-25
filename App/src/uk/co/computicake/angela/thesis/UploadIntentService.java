@@ -19,22 +19,15 @@ public class UploadIntentService extends IntentService {
 	protected void onHandleIntent(Intent intent) {
 
 		// fileTuple = [name, contents]
-		String[] fileTuple = intent.getStringArrayExtra(Utils.FILE_TUPLE);
-		
-		//Log.d(TAG, fileTuple[0]);
-		
+		String[] fileTuple = intent.getStringArrayExtra(Utils.FILE_TUPLE);			
 		RESTClient rc = new RESTClient();
-		String db;
 		
 		if(fileTuple == null){
 			Log.d(TAG, "No data passed");
 			stopSelf();
 		}
-		db = fileTuple[0];
-		Log.d(TAG, db);
-		//} else {
-		//	db = "activity-thesis-" + new Date().getTime();
-		//} 
+		
+		String db = fileTuple[0];
 		boolean result;
 		try {
 			result = rc.checkServer();
@@ -51,7 +44,7 @@ public class UploadIntentService extends IntentService {
 			//storeData();
 		}
 		
-		//deleteFile(fileTuple[0]);
+		deleteFile(fileTuple[0]);
 		stopSelf();
 	}
 

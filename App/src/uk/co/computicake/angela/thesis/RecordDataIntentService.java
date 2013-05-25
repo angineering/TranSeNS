@@ -16,25 +16,25 @@ import android.widget.TextView;
 
 /**
  * Used to record relevant data each time the acceleration sensor changes
- * @author Angie
  *
  */
 public class RecordDataIntentService extends IntentService {
-
+	private static final boolean DEBUG = false;
+	
 	public RecordDataIntentService() {
 		super("RecordDataIntentService");
 	}
 
 	@Override
-	protected void onHandleIntent(Intent intent) {		
+	protected void onHandleIntent(Intent intent) {
 		long time = new Date().getTime();
 		String dataPoint ="";
 		
-		float acceleration = intent.getFloatExtra(Utils.ACCELERATION, -1);
+		String acceleration = intent.getStringExtra(Utils.ACCELERATION);
 		String location = intent.getStringExtra(Utils.LOCATION);
 		
 		DetectedActivity activity = ActivityRecognitionService.ACTIVITY;
-		String activityName = getNameFromType(activity.getType());
+		String activityName = Utils.getNameFromType(activity.getType());
 		int activityConfidence = activity.getConfidence();		
 		
 		try {
@@ -42,7 +42,7 @@ public class RecordDataIntentService extends IntentService {
 					.key("location")
 					.value(location)
 					.key("acceleration")
-					.value(acceleration)
+					.value(Float.valueOf(acceleration))
 					.key("time")
 					.value(time)
 					.key("activityName")
@@ -54,34 +54,9 @@ public class RecordDataIntentService extends IntentService {
 		} catch (JSONException e) {
 			e.printStackTrace();
 		}
-		Log.d("dataPoint", dataPoint);
+		if(DEBUG) Log.d("dataPoint", dataPoint);
 		MainActivity.data = MainActivity.data.concat(dataPoint +","); //really want to comma separate. maybe use json object? try and see if it breaks		
 		
 		stopSelf();
 	}
-	
-	/**
-     * Map detected activity types to strings
-     *
-     * @param activityType The detected activity type
-     * @return A user-readable name for the type
-     */
-    private String getNameFromType(int activityType) {
-        switch(activityType) {
-            case DetectedActivity.IN_VEHICLE:
-                return "in vehicle";
-            case DetectedActivity.ON_BICYCLE:
-                return "cycling";
-            case DetectedActivity.ON_FOOT:
-                return "walking";
-            case DetectedActivity.STILL:
-                return "still";
-            case DetectedActivity.UNKNOWN: //is this really necessary when default is unknown?
-                return "unknown";
-            case DetectedActivity.TILTING:
-                return "tilting";
-        }
-        return "unknown";
-    }
-
 }
