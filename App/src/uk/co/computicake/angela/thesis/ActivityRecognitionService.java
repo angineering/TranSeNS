@@ -9,14 +9,12 @@ import com.google.android.gms.location.ActivityRecognitionResult;
 import com.google.android.gms.location.DetectedActivity;
 
 import android.app.IntentService;
-import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender.SendIntentException;
-import android.location.Location;
 import android.os.Binder;
 import android.os.Bundle;
 import android.os.Handler;
@@ -36,7 +34,7 @@ public class ActivityRecognitionService extends Service implements
 	private DetectedActivity activity;
 	private String TAG = "ActivityRecognitionService";
 	private PendingIntent callbackIntent; 
-	//private ActivityIntentReceiver resultReceiver = new ActivityIntentReceiver(null);
+	private ActivityIntentReceiver resultReceiver;
 	private final boolean DEBUG = true;
 	private final int DETECTION_INTERVAL_MS = Utils.SECOND*60; //should really be every 5 minutes or so.
 	
@@ -49,9 +47,11 @@ public class ActivityRecognitionService extends Service implements
 
 	@Override
 	public void onConnected(Bundle connectionHint) {
+		resultReceiver = new ActivityIntentReceiver(new Handler());
+		resultReceiver.setParentContext(this);
 		Intent intent = new Intent(ActivityRecognitionService.this, ActivityRecognitionIntentService.class);
 		// name MUST include a package prefix!
-		//intent.putExtra(Utils.RESULT_RECEIVER, resultReceiver); //whyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+		//intent.putExtra(Utils.RESULT_RECEIVER, resultReceiver); //whyyyyyyyyyyyyyyyyyyyyyyyyyyyyy. maybe it will work better now that I set parent context?
 	    callbackIntent = PendingIntent.getService(this, 0, intent,
 	             PendingIntent.FLAG_UPDATE_CURRENT);	    
 	    activityClient.requestActivityUpdates(DETECTION_INTERVAL_MS, callbackIntent);		// should be seldom, say every 6 minutes
@@ -123,8 +123,14 @@ public class ActivityRecognitionService extends Service implements
 	
 	public class ActivityIntentReceiver extends ResultReceiver {
 		
+		private Context context = null;
+		
 		public ActivityIntentReceiver(Handler handler) {
 			super(handler);
+		}
+		
+		protected void setParentContext(Context context){
+			this.context = context;
 		}
 		
 		@Override

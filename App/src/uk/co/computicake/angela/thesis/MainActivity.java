@@ -89,7 +89,7 @@ public class MainActivity extends Activity implements
 	protected Location location;
 	private LocationRequest locationRequest;
 	private final float NOISE = (float) 0.1; 
-	private String data = ""; // consider changing this to an array list 
+	protected static String data = ""; // consider changing this to an array list. also do this in a nicer way than a static.
 	
 	//private boolean locationUpdatesRequested; // off until user requests updates
 	//private ActivityRecognitionClient activityClient; 
@@ -163,7 +163,7 @@ public class MainActivity extends Activity implements
         }
         
         serviceConnection = new ServiceConnection() {
-        	private ActivityRecognitionService boundActivityRecognitionService;
+        	private ActivityRecognitionService boundActivityRecognitionService; // where is this actually supposed to be used?
 			@Override
 			public void onServiceConnected(ComponentName name, IBinder service) {
 				boundActivityRecognitionService = ((ActivityRecognitionService.ActivityRecognitionBinder)service).getService();				
@@ -281,8 +281,8 @@ public class MainActivity extends Activity implements
             sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
             doBindService();
 
-            TextView tSpeed = (TextView)findViewById(R.id.speed);
-            tSpeed.setText("0.00");
+            TextView tAccel = (TextView)findViewById(R.id.speed);
+            tAccel.setText("0.00");
             TextView tActivity = (TextView)findViewById(R.id.activity);
             tActivity.setText("Unknown");
     	} else {
@@ -317,8 +317,18 @@ public class MainActivity extends Activity implements
      * Uploads the data that has just been gathered to the db. 
      */
     private void sendCurrentData(){
-    	String json = "{\"docs\":[" + data + "]}";	
-    	new UploadFilesTask().execute(json);
+    	String json = "{\"docs\":[" + data + "]}";
+    	String dbName = "activity-thesis-" + new Date().getTime();
+    	String[] fileTuple = {dbName, json};
+    	send(fileTuple); //try after we've checked that new storage method works
+    	//new UploadFilesTask().execute(json); 
+    }
+    
+    private void send(String[] fileTuple){
+    	Log.d("MainActivity", "sending...");
+    	Intent intent = new Intent(MainActivity.this, UploadIntentService.class);
+    	intent.putExtra(Utils.FILE_TUPLE, fileTuple);
+    	startService(intent);
     }
     
     /**
@@ -431,22 +441,24 @@ public class MainActivity extends Activity implements
 		if (DEBUG) Log.d(DEBUG_TAG, "Sensor change registered.");
 		// We don't care about super-precision, as there is a lot of noise
 		DecimalFormat d = new DecimalFormat("#.##");
-		String shortSpeed;
+		String shortAccel;
 		
 		float x = event.values[0];
 		float y = event.values[1];
 		float z = event.values[2];
-		// should give 0 when the phone is at rest, as gravity is not included in readings.
-		double speed = Math.sqrt(x*x + y*y + z*z); 
+		double accel = Math.sqrt(x*x + y*y + z*z); 
 		
-		TextView tSpeed = (TextView)findViewById(R.id.speed);
-		if(Math.abs(speed - oldSpeed) < NOISE){ // This does not do as intended. does speed < NOISE, as oldSpeed is never changed from 0
-			tSpeed.setText("0.00");
+		TextView tAccel = (TextView)findViewById(R.id.speed);
+		
+		// we are standing still
+		if(accel < NOISE){ 
+			tAccel.setText("0.00");
 			return;
 		}
-		shortSpeed = d.format(speed);
-		tSpeed.setText(shortSpeed);
-		if (DEBUG) Log.d(DEBUG_TAG, "speed: "+ shortSpeed);
+		shortAccel= d.format(accel);
+		accel = Float.valueOf(shortAccel); 
+		tAccel.setText(shortAccel);
+		if (DEBUG) Log.d(DEBUG_TAG, "Acceleration: "+ shortAccel);
 		
 		
 		// Recording data should prolly be a separate intentservice or something.
@@ -454,12 +466,13 @@ public class MainActivity extends Activity implements
 		// NOTE: Location might be outdated or null
 		//Location lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER); // or GPS_PROVIDER. Guess there might be a lot of wrong locations or nulls here.
 		// yep. plenty of GC_FOR_ALLOC as soon as the phone is moved. 
+		/*
 		DetectedActivity activity = ActivityRecognitionService.ACTIVITY;
 		String activityName = getNameFromType(activity.getType());
 		int activityConfidence = activity.getConfidence();
 		TextView tActivity = (TextView)findViewById(R.id.activity);
         tActivity.setText(activityName + "  "+ activityConfidence);
-		
+		*/
 		String locationString = "";
 		if (location == null){
 			 //get latest known location useful when you need location quickly
@@ -467,14 +480,14 @@ public class MainActivity extends Activity implements
 		}
 		if (location != null){
 			locationString = location.getLatitude() + "," + location.getLongitude(); 
-		}
+		}/*
 		long time = new Date().getTime();
 		String dataPoint ="";
 		try {
 			dataPoint = new JSONStringer().object()
 					.key("location")
 					.value(locationString)
-					.key("speed")
+					.key("acceleration")
 					.value(Float.valueOf(shortSpeed))
 					.key("time")
 					.value(time)
@@ -489,12 +502,20 @@ public class MainActivity extends Activity implements
 		}
 		if (DEBUG) Log.d("dataPoint", dataPoint);
 		data = data.concat(dataPoint +","); //really want to comma separate. maybe use json object? try and see if it breaks		
-		
+		*/
 		// Add speed to the graph
-		Point p = new Point(pos++, (float)speed);
+		Point p = new Point(pos++, (float)accel);
 		chart.addNewPoints(p);
 		chart.adjust_x((int)pos);
 		view.repaint();
+		
+		DetectedActivity activity = ActivityRecognitionService.ACTIVITY;
+		String activityName = getNameFromType(activity.getType());
+		int activityConfidence = activity.getConfidence();
+		TextView tActivity = (TextView)findViewById(R.id.activity);
+        tActivity.setText(activityName + "  "+ activityConfidence);
+		
+		
 		
 	}
 	
@@ -503,6 +524,7 @@ public class MainActivity extends Activity implements
     	
     }
     
+    /*
     private class UploadFilesTask extends AsyncTask<String, Void, Boolean> { //if you make this into a service it has higher priority and is less likely to be killed by the os.
     	// Do long-running work in here
     	protected Boolean doInBackground(String...strings ){
@@ -535,7 +557,7 @@ public class MainActivity extends Activity implements
     		}
     	}
 
-    }
+    }*/
     /*
     private class SendStoredFilesTask extends AsyncTask<Void, Void, String[]>{
 
