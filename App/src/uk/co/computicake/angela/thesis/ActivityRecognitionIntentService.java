@@ -14,15 +14,14 @@ import com.google.android.gms.location.DetectedActivity;
 
 public class ActivityRecognitionIntentService extends IntentService {
 	private String TAG = "ActivityRecognitionIntentService";
-	private final boolean DEBUG = true;
-	
+	private final boolean DEBUG = true;	
 	public ActivityRecognitionIntentService() {	
 		super("ActivityRecognitionIntentService");
 	}
 	
 	protected void onHandleIntent(Intent intent) {
 		if(DEBUG) Log.d(TAG, "handle intent");
-		//ResultReceiver receiver = intent.getParcelableExtra(ActivityRecognitionService.RESULT_RECEIVER);   
+		//ResultReceiver receiver = intent.getParcelableExtra(Utils.RESULT_RECEIVER);   
 	     if (ActivityRecognitionResult.hasResult(intent)) {
 	    	 ActivityRecognitionResult result = ActivityRecognitionResult.extractResult(intent);
 	    	 if(DEBUG) Log.d(TAG, "Intent result:"+result);

@@ -36,11 +36,9 @@ public class ActivityRecognitionService extends Service implements
 	private DetectedActivity activity;
 	private String TAG = "ActivityRecognitionService";
 	private PendingIntent callbackIntent; 
-	private ActivityIntentReceiver resultReceiver = new ActivityIntentReceiver(null);
+	//private ActivityIntentReceiver resultReceiver = new ActivityIntentReceiver(null);
 	private final boolean DEBUG = true;
-	private final int DETECTION_INTERVAL_MS = 20000;
-	private final static int CONNECTION_FAILURE_RESOLUTION_REQUEST = 9000;
-	protected final static String RESULT_RECEIVER = "uk.co.computicake.angela.thesis.RESULT_RECEIVER";
+	private final int DETECTION_INTERVAL_MS = Utils.SECOND*60; //should really be every 5 minutes or so.
 	
 	public static DetectedActivity ACTIVITY;
 	
@@ -53,16 +51,22 @@ public class ActivityRecognitionService extends Service implements
 	public void onConnected(Bundle connectionHint) {
 		Intent intent = new Intent(ActivityRecognitionService.this, ActivityRecognitionIntentService.class);
 		// name MUST include a package prefix!
-		//intent.putExtra(ActivityRecognitionService.RESULT_RECEIVER, resultReceiver); //whyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+		//intent.putExtra(Utils.RESULT_RECEIVER, resultReceiver); //whyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
 	    callbackIntent = PendingIntent.getService(this, 0, intent,
 	             PendingIntent.FLAG_UPDATE_CURRENT);	    
 	    activityClient.requestActivityUpdates(DETECTION_INTERVAL_MS, callbackIntent);		// should be seldom, say every 6 minutes
-	    if(DEBUG) Log.d(TAG, "connected");	    
+	    if(DEBUG) Log.d(TAG, "connected");	
+	    // disconnect client as the in progress flas is synchronous (not sure what this means). this messes with unbind however. what is preferred? Turns out it picks up activities perfecly well disconnected. 
+	    // what are the benefits of being able to unbind it vs  disconnecting it right away? I guess it means we can't stop it polling for activities
+	    // same amount of GC_FOR_ALLOC with and without the disconnect. haven't tried to just start instead of binding the service tho. 
+	    //activityClient.disconnect();
 	}
 	
 	public void onCreate(){
-		ACTIVITY = new DetectedActivity(DetectedActivity.UNKNOWN, 0);
-		activity = new DetectedActivity(DetectedActivity.UNKNOWN, 0);
+		if(ACTIVITY == null){
+			ACTIVITY = new DetectedActivity(DetectedActivity.UNKNOWN, 0);
+		}
+		//activity = new DetectedActivity(DetectedActivity.UNKNOWN, 0);
 		activityClient = new ActivityRecognitionClient(this, this, this);
 		activityClient.connect();
 		if(DEBUG) Log.d(TAG, "created");
@@ -77,7 +81,6 @@ public class ActivityRecognitionService extends Service implements
 	}
 	
 	public void onDestroy(){
-		Log.d(TAG, "Disconnected");
 		activityClient.disconnect();
 	}
 
@@ -87,7 +90,6 @@ public class ActivityRecognitionService extends Service implements
 	}
 	
 	public boolean onUnbind(Intent i){
-		if(DEBUG) Log.d(TAG, "unbound");
 		activityClient.removeActivityUpdates(callbackIntent);		
 		return true;		
 	}

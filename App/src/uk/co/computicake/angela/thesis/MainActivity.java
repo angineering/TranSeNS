@@ -76,11 +76,9 @@ public class MainActivity extends Activity implements
 		ConnectionCallbacks,
 		OnConnectionFailedListener {
 	
-	private static final boolean DEVELOPER_MODE = true;
+
 	private static final boolean DEBUG = false;
 	private static final boolean WARN = true;
-	private static final int ONE_MINUTE = 60*1000;
-	private static final int LOC_UPDATE_FREQ = 6*1000;
 	private static final String LOC_SRV = "Location Services";
 	
 	private SensorManager sensorManager;
@@ -95,7 +93,7 @@ public class MainActivity extends Activity implements
 	
 	//private boolean locationUpdatesRequested; // off until user requests updates
 	//private ActivityRecognitionClient activityClient; 
-	private ActivityRecognitionService boundActivityRecognitionService;
+	
 	private ServiceConnection serviceConnection;
 	private boolean isBound = false;
 	
@@ -110,7 +108,7 @@ public class MainActivity extends Activity implements
 	
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-    	if (DEVELOPER_MODE) {
+    	if (Utils.DEVELOPER_MODE) {
             StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder()
                     .detectDiskReads()
                     .detectDiskWrites()
@@ -149,11 +147,11 @@ public class MainActivity extends Activity implements
 			@Override
 			public void onReceive(Context context, Intent intent) {				
 				if(wifiConnected()){
-					//anything that requires asynchronous operation is not available, 
-					//because you will need to return from the function to handle the asynchronous operation, 
-					//but at that point the BroadcastReceiver is no longer active and thus the system is free 
-					//to kill its process before the asynchronous operation completes.
-					//new SendStoredFilesTask().execute();	// TODO: I think this leaks, as i get #asynctask1 with a ridiculous uptime and stime. THIS IS THE DEVIL
+					//String[] fileTuple = findFile(MainActivity.this); just NO. TONS of GC_FOR_ALLOC. like a waterfall!
+					//Log.d("broadcast receiver", fileTuple[0]);
+					//Intent i = new Intent(MainActivity.this, UploadIntentService.class);
+					//i.putExtra(Utils.FILE_TUPLE, fileTuple);
+					//startService(i); //it's fine with just starting a service that stops itself shortly afterwards.
 				}
 			}       	
         };
@@ -165,6 +163,7 @@ public class MainActivity extends Activity implements
         }
         
         serviceConnection = new ServiceConnection() {
+        	private ActivityRecognitionService boundActivityRecognitionService;
 			@Override
 			public void onServiceConnected(ComponentName name, IBinder service) {
 				boundActivityRecognitionService = ((ActivityRecognitionService.ActivityRecognitionBinder)service).getService();				
@@ -326,14 +325,14 @@ public class MainActivity extends Activity implements
      * Finds a file that has been stored on the internal hdd.
      * @return array tuple (filename, file contents as String).
      */
-    private String[] findFile(){
+    private String[] findFile(Context context){
     	String file = "";
     	String[] fileList = fileList();
     	if (fileList == null || fileList.length == 0) return null;
     	String filename = fileList[0];
     	Log.d("findFile", filename);
     	try{
-    		FileInputStream fis = openFileInput(filename);
+    		FileInputStream fis = context.openFileInput(filename);
     		int content;
     		while ((content = fis.read())!= -1){
     			file += (char) content;
@@ -342,6 +341,8 @@ public class MainActivity extends Activity implements
     	} catch (IOException e){
     		Log.w("FindFile", "File not found.");
     		e.printStackTrace();
+    	} finally {
+    		
     	}
     	String[] fileTuple =  {filename, file};
     	return fileTuple;
@@ -422,6 +423,8 @@ public class MainActivity extends Activity implements
 	}
 
 	
+	//TODO: You are doing waaaaay too much in here!
+	// it seems GC_FOR_ALLOC happens (more often?) when the phone is not moved (actually it's hardly coming up at all this run when still), which signifies that there is too much going on here. try piping some off to other functions or services.
 	@Override
 	public void onSensorChanged(SensorEvent event) {
 		final String DEBUG_TAG = "Sensor Changed";
@@ -446,9 +449,11 @@ public class MainActivity extends Activity implements
 		if (DEBUG) Log.d(DEBUG_TAG, "speed: "+ shortSpeed);
 		
 		
+		// Recording data should prolly be a separate intentservice or something.
 		// Record speed
 		// NOTE: Location might be outdated or null
 		//Location lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER); // or GPS_PROVIDER. Guess there might be a lot of wrong locations or nulls here.
+		// yep. plenty of GC_FOR_ALLOC as soon as the phone is moved. 
 		DetectedActivity activity = ActivityRecognitionService.ACTIVITY;
 		String activityName = getNameFromType(activity.getType());
 		int activityConfidence = activity.getConfidence();
@@ -498,7 +503,7 @@ public class MainActivity extends Activity implements
     	
     }
     
-    private class UploadFilesTask extends AsyncTask<String, Void, Boolean> {
+    private class UploadFilesTask extends AsyncTask<String, Void, Boolean> { //if you make this into a service it has higher priority and is less likely to be killed by the os.
     	// Do long-running work in here
     	protected Boolean doInBackground(String...strings ){
     		RESTClient rc = new RESTClient();
@@ -506,7 +511,7 @@ public class MainActivity extends Activity implements
     		if(strings.length == 2){
     			db = strings[1];
     		} else {
-    			db = "loctests-thesis-" + new Date().getTime();
+    			db = "activity-thesis-" + new Date().getTime();
     		}
     		boolean result;
 			try {
@@ -531,7 +536,7 @@ public class MainActivity extends Activity implements
     	}
 
     }
-    
+    /*
     private class SendStoredFilesTask extends AsyncTask<Void, Void, String[]>{
 
 		@Override
@@ -551,7 +556,7 @@ public class MainActivity extends Activity implements
 		}
     	
     }
-
+*/
 	@Override
 	public void onConnectionFailed(ConnectionResult result) {
 		// TODO Auto-generated method stub
