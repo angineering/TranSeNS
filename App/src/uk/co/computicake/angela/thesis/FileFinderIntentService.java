@@ -27,7 +27,8 @@ public class FileFinderIntentService extends IntentService {
     		stopSelf();
     	}
     	String filename = fileList[0];
-    	Log.d("findFile", filename);
+    	Log.d("FileFinder", "Nr of files: "+fileList.length);
+    	
   
     	try {
             InputStream inputStream = openFileInput(filename);
@@ -51,11 +52,15 @@ public class FileFinderIntentService extends IntentService {
     	catch (IOException e){
     		Log.w("FindFile", "File not found.");
     		e.printStackTrace();
-    	} finally {
-    		
-    	}
+    	} 
     	String[] fileTuple =  {filename, file};
+    	Log.d("FileFinder", filename+ " size:"+file.length());
     	// send to uploader
+    	Log.d("send", "sending...");
+    	//String[] fileTuple2 = {"xxx","{docs:{}"};
+    	Intent i = new Intent(FileFinderIntentService.this, UploadIntentService.class);
+    	i.putExtra(Utils.FILE_TUPLE, fileTuple);
+    	startService(i);
     	stopSelf();
 	}
 

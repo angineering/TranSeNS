@@ -148,10 +148,8 @@ public class MainActivity extends Activity implements
 			@Override
 			public void onReceive(Context context, Intent intent) {				
 				if(wifiConnected()){
-					String[] fileTuple = findFile();// just NO. TONS of GC_FOR_ALLOC. like a waterfall!
-					//Log.d("broadcast receiver", fileTuple[0]);
-					//Intent i = new Intent(MainActivity.this, FileFinderIntentService.class);
-					send(fileTuple);
+					Intent i = new Intent(MainActivity.this, UploadIntentService.class);
+					startService(i);					
 				}
 			}       	
         };
@@ -248,8 +246,6 @@ public class MainActivity extends Activity implements
     public boolean onOptionsItemSelected(MenuItem item){
     	switch (item.getItemId()){
     	case R.id.kill:
-    		//unregisterReceiver(receiver);
-    		//sensorManager.unregisterListener(this);
     		finish();
     	default:
     		return super.onOptionsItemSelected(item);
@@ -288,24 +284,6 @@ public class MainActivity extends Activity implements
             TextView tActivity = (TextView)findViewById(R.id.activity);
             tActivity.setText("Unknown 0");
     	} else {
-    		/*
-    		// Stop tracking and prepare to send data on WiFi connect
-    		TextView t = (TextView)findViewById(R.id.speed);
-    		t.setText("STOPPED"); 
-    		TextView tActivity = (TextView)findViewById(R.id.activity);
-            tActivity.setText("");
-    		sensorManager.unregisterListener(this);
-    		locationClient.removeLocationUpdates(this);
-    		// Clear chart
-    		//chart.clear();
-    		doUnbindService();
-       		if(wifiConnected()){
-       			sendCurrentData();
-       		} else {
-       			storeData();
-       		}
-    		data = ""; //technically doing this twice  if it's stored. decide where you want it. 
-    		*/
     		stopTracking();
     	}
     	
@@ -334,8 +312,6 @@ public class MainActivity extends Activity implements
     @Override
     protected void onStart() {
     	super.onStart();
-    	//view = chart.getView(this);
-    	//layout.addView(view);
     }
     
     /**
@@ -345,57 +321,21 @@ public class MainActivity extends Activity implements
     	String json = "{\"docs\":[" + data + "]}";
     	String dbName = "current-thesis-" + new Date().getTime();
     	String[] fileTuple = {dbName, json};
-    	send(fileTuple);
+    	//send(fileTuple); 
+    	new UploadFilesTask().execute(fileTuple); // as you can't send more than 1MB with putExtra. find other solution? Guess this works for now.
     }
     
+    
+    // PROBLEM: you can't pass an argument larger than 1MB to putExtra, so the data won't upload. 
     /**
      * Starts a service sending the given data to the server
      * @param fileTuple [db name, contents] Data to be sent to the server
      */
     private void send(String[] fileTuple){
+    	Log.d("send", "sending...");
     	Intent intent = new Intent(MainActivity.this, UploadIntentService.class);
     	intent.putExtra(Utils.FILE_TUPLE, fileTuple);
     	startService(intent);
-    }
-    
-    /**
-     * Finds a file that has been stored on the internal hdd.
-     * @return array tuple (filename, file contents as String).
-     */
-    private String[] findFile(){
-    	String file = "";
-    	String[] fileList = fileList();
-    	//Log.d("findFile", "!!!"+fileList);
-    	if (fileList == null || fileList.length == 0) return null;
-    	String filename = fileList[0];
-    	Log.d("findFile", filename);
-    	
-    	try {
-            InputStream inputStream = openFileInput(filename);
-            long start = System.nanoTime();
-            if ( inputStream != null ) {
-                InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
-                BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
-                String receiveString = "";
-                StringBuilder stringBuilder = new StringBuilder();
-                 
-                while ( (receiveString = bufferedReader.readLine()) != null ) {
-                    stringBuilder.append(receiveString);
-                }
-                 
-                inputStream.close();
-                file = stringBuilder.toString();
-                long time = System.nanoTime() - start;
-        		System.out.printf("FileFinderService Took %.3f seconds%n", time/1e9);
-            }
-        }catch (IOException e){
-    		Log.w("FindFile", "File not found.");
-    		e.printStackTrace();
-    	} finally {
-    		
-    	}
-    	String[] fileTuple =  {filename, file};
-    	return fileTuple;	
     }
     
     // And for testing. try on SD card later in process, as files are likely to be huge. (NOTE: 10000 lines is 3 MB it seems)
@@ -444,12 +384,8 @@ public class MainActivity extends Activity implements
     	String json = "{\"docs\":[" + data + "]}";
     	try{
     		FileOutputStream fos = openFileOutput(filename, Context.MODE_PRIVATE);
-    		long start = System.nanoTime();
     		fos.write(json.getBytes());
-    		long time = System.nanoTime() - start;
-    		System.out.printf("Took %.3f seconds%n", time/1e9);
-    		fos.close();
-    		
+    		fos.close();    		
     		data = "";
     		Log.d(tag, "File written to storage");
     	} catch (Exception e){
@@ -476,10 +412,6 @@ public class MainActivity extends Activity implements
 		// TODO Auto-generated method stub		
 	}
 
-	
-	//TODO: You are doing waaaaay too much in here!
-	// it seems GC_FOR_ALLOC happens (more often?) when the phone is not moved (actually it's hardly coming up at all this run when still), which signifies that there is too much going on here. try piping some off to other functions or services.
-	// Recording of data moved to intent service and do a check for activity, but there's still a LOT of GC_FOR_ALLOC that happens as soon as the phone is moved. I think more stuff has to be moved :/ 
 	@Override
 	public void onSensorChanged(SensorEvent event) {
 		final String DEBUG_TAG = "Sensor Changed";
@@ -505,7 +437,7 @@ public class MainActivity extends Activity implements
 		if (DEBUG) Log.d(DEBUG_TAG, "Acceleration: "+ shortAccel);
 
 		// Add speed to the graph
-		Point p = new Point(pos++, (float)accel);
+		Point p = new Point(pos++, Float.valueOf(shortAccel));
 		chart.addNewPoints(p);
 		chart.adjust_x((int)pos);
 		view.repaint();  //commenting this out still gave quite a few GC_FOR_ALLOC
@@ -523,6 +455,7 @@ public class MainActivity extends Activity implements
 		//	stopTracking();
 		//	((ToggleButton) (View)this.view).setChecked(false);// note entirely sure this works
 		//}
+		/*
 		String locationString = "";
 		if (location == null){
 			 //get latest known location useful when you need location quickly
@@ -535,26 +468,69 @@ public class MainActivity extends Activity implements
 		Intent intent = new Intent(MainActivity.this, RecordDataIntentService.class);
 		intent.putExtra(Utils.ACCELERATION, shortAccel);
 		intent.putExtra(Utils.LOCATION, locationString);
-		startService(intent);				
+		startService(intent);	
+		*/	
+		//record(shortAccel);
+		new RecordDataTask().execute(shortAccel);
 	}
     
-    /*
+	// To test if the system waits for a void function or not:
+	private void record(String shortAccel){
+		String locationString = "";
+		if (location == null){
+			 //get latest known location useful when you need location quickly
+	      	location = locationClient.getLastLocation();
+		}
+		if (location != null){
+			locationString = location.getLatitude() + "," + location.getLongitude(); 
+		}
+        
+		Intent intent = new Intent(MainActivity.this, RecordDataIntentService.class);
+		intent.putExtra(Utils.ACCELERATION, shortAccel);
+		intent.putExtra(Utils.LOCATION, locationString);
+		startService(intent);	
+	}
+	
+	private class RecordDataTask extends AsyncTask<String, Void, Void> {
+
+		@Override
+		protected Void doInBackground(String... params) {
+			String shortAccel = params[0];
+			String locationString = "";
+			if (location == null){
+				 //get latest known location useful when you need location quickly
+		      	location = locationClient.getLastLocation();
+			}
+			if (location != null){
+				locationString = location.getLatitude() + "," + location.getLongitude(); 
+			}
+	        
+			Intent intent = new Intent(MainActivity.this, RecordDataIntentService.class);
+			intent.putExtra(Utils.ACCELERATION, shortAccel);
+			intent.putExtra(Utils.LOCATION, locationString);
+			startService(intent);
+			return null;
+		}
+		
+	}
+	
+    
     private class UploadFilesTask extends AsyncTask<String, Void, Boolean> { //if you make this into a service it has higher priority and is less likely to be killed by the os.
     	// Do long-running work in here
     	protected Boolean doInBackground(String...strings ){
     		RESTClient rc = new RESTClient();
     		String db;
     		if(strings.length == 2){
-    			db = strings[1];
+    			db = strings[0];
     		} else {
-    			db = "activity-thesis-" + new Date().getTime();
+    			db = "async-thesis-" + new Date().getTime();
     		}
     		boolean result;
 			try {
 				result = rc.checkServer();
 				if(result){ // not sure if this is strictly necessary, as we are within a try/catch
 					rc.createDB(db);
-					rc.addDocuments(db, strings[0]);
+					rc.addDocuments(db, strings[1]);
 				}
 			} catch (Exception e) {
 				result = false;
@@ -570,8 +546,7 @@ public class MainActivity extends Activity implements
     			storeData();
     		}
     	}
-
-    }*/
+    }
 
 	@Override
 	public void onConnectionFailed(ConnectionResult result) {

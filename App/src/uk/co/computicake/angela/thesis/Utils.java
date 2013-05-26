@@ -18,6 +18,7 @@ public final class Utils {
 	protected static final String ACCELERATION = "uk.co.computicake.angela.thesis.ACCELERATION";
 	protected static final String LOCATION = "uk.co.computicake.angela.thesis.LOCATION";
 	protected static final String DATA = "uk.co.computicake.angela.thesis.DATA";
+	public static final String FIND_FILE ="uk.co.computicake.angela.thesis.FIND_FILE";
 	
 	
 	/**
