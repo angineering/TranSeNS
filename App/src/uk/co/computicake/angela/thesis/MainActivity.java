@@ -5,11 +5,14 @@ package uk.co.computicake.angela.thesis;
 // TODO add checks for checking that google play services is available
 // TODO have icon on status bar when running (since is supposed to be a background program really)
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.text.DecimalFormat;
 import java.util.Date;
 import java.util.concurrent.ExecutionException;
@@ -120,7 +123,6 @@ public class MainActivity extends Activity implements
                     .penaltyDeath()
                     .build());
         }
-    	//Log.d("Create", "Creating");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
@@ -146,11 +148,10 @@ public class MainActivity extends Activity implements
 			@Override
 			public void onReceive(Context context, Intent intent) {				
 				if(wifiConnected()){
-					//String[] fileTuple = findFile(MainActivity.this); just NO. TONS of GC_FOR_ALLOC. like a waterfall!
+					String[] fileTuple = findFile();// just NO. TONS of GC_FOR_ALLOC. like a waterfall!
 					//Log.d("broadcast receiver", fileTuple[0]);
-					//Intent i = new Intent(MainActivity.this, UploadIntentService.class);
-					//i.putExtra(Utils.FILE_TUPLE, fileTuple);
-					//startService(i); //it's fine with just starting a service that stops itself shortly afterwards.
+					//Intent i = new Intent(MainActivity.this, FileFinderIntentService.class);
+					send(fileTuple);
 				}
 			}       	
         };
@@ -271,6 +272,7 @@ public class MainActivity extends Activity implements
      * @param view
      */
     public void onToggleActive(View view){
+    	//String[] fileTuple = findFile();
     	final String DEBUG_TAG = "Toggle Active";    	
     	boolean on = ((ToggleButton) view).isChecked();
     	if(DEBUG) Log.d(DEBUG_TAG, ""+ on);
@@ -286,6 +288,7 @@ public class MainActivity extends Activity implements
             TextView tActivity = (TextView)findViewById(R.id.activity);
             tActivity.setText("Unknown 0");
     	} else {
+    		/*
     		// Stop tracking and prepare to send data on WiFi connect
     		TextView t = (TextView)findViewById(R.id.speed);
     		t.setText("STOPPED"); 
@@ -302,8 +305,30 @@ public class MainActivity extends Activity implements
        			storeData();
        		}
     		data = ""; //technically doing this twice  if it's stored. decide where you want it. 
+    		*/
+    		stopTracking();
     	}
     	
+    }
+    
+    // Stop tracking and prepare to send data on WiFi connect
+    private void stopTracking(){
+    	// Stop tracking and prepare to send data on WiFi connect
+		TextView t = (TextView)findViewById(R.id.speed);
+		t.setText("STOPPED"); 
+		TextView tActivity = (TextView)findViewById(R.id.activity);
+        tActivity.setText("");
+		sensorManager.unregisterListener(this);
+		locationClient.removeLocationUpdates(this);
+		// Clear chart
+		//chart.clear();
+		doUnbindService();
+   		if(wifiConnected()){
+   			sendCurrentData();
+   		} else {
+   			storeData();
+   		}
+		data = ""; //technically doing this twice  if it's stored. decide where you want it.
     }
     
     @Override
@@ -318,14 +343,16 @@ public class MainActivity extends Activity implements
      */
     private void sendCurrentData(){
     	String json = "{\"docs\":[" + data + "]}";
-    	String dbName = "activity-thesis-" + new Date().getTime();
+    	String dbName = "current-thesis-" + new Date().getTime();
     	String[] fileTuple = {dbName, json};
-    	send(fileTuple); //try after we've checked that new storage method works
-    	//new UploadFilesTask().execute(json); 
+    	send(fileTuple);
     }
     
+    /**
+     * Starts a service sending the given data to the server
+     * @param fileTuple [db name, contents] Data to be sent to the server
+     */
     private void send(String[] fileTuple){
-    	Log.d("MainActivity", "sending...");
     	Intent intent = new Intent(MainActivity.this, UploadIntentService.class);
     	intent.putExtra(Utils.FILE_TUPLE, fileTuple);
     	startService(intent);
@@ -335,31 +362,44 @@ public class MainActivity extends Activity implements
      * Finds a file that has been stored on the internal hdd.
      * @return array tuple (filename, file contents as String).
      */
-    private String[] findFile(Context context){
+    private String[] findFile(){
     	String file = "";
     	String[] fileList = fileList();
+    	//Log.d("findFile", "!!!"+fileList);
     	if (fileList == null || fileList.length == 0) return null;
     	String filename = fileList[0];
     	Log.d("findFile", filename);
-    	try{
-    		FileInputStream fis = context.openFileInput(filename);
-    		int content;
-    		while ((content = fis.read())!= -1){
-    			file += (char) content;
-    		}
-    		fis.close();
-    	} catch (IOException e){
+    	
+    	try {
+            InputStream inputStream = openFileInput(filename);
+            long start = System.nanoTime();
+            if ( inputStream != null ) {
+                InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
+                BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+                String receiveString = "";
+                StringBuilder stringBuilder = new StringBuilder();
+                 
+                while ( (receiveString = bufferedReader.readLine()) != null ) {
+                    stringBuilder.append(receiveString);
+                }
+                 
+                inputStream.close();
+                file = stringBuilder.toString();
+                long time = System.nanoTime() - start;
+        		System.out.printf("FileFinderService Took %.3f seconds%n", time/1e9);
+            }
+        }catch (IOException e){
     		Log.w("FindFile", "File not found.");
     		e.printStackTrace();
     	} finally {
     		
     	}
     	String[] fileTuple =  {filename, file};
-    	return fileTuple;
-    			
+    	return fileTuple;	
     }
     
-    // And for testing. try on SD card later in process, as files are likely to be huge. (NOTE: 10000 lines is 2.5 MB it seems)
+    // And for testing. try on SD card later in process, as files are likely to be huge. (NOTE: 10000 lines is 3 MB it seems)
+    // contemplate moving into separate thread.
     /**
      * Wrapper for storing recorded data
      */
@@ -404,8 +444,12 @@ public class MainActivity extends Activity implements
     	String json = "{\"docs\":[" + data + "]}";
     	try{
     		FileOutputStream fos = openFileOutput(filename, Context.MODE_PRIVATE);
+    		long start = System.nanoTime();
     		fos.write(json.getBytes());
+    		long time = System.nanoTime() - start;
+    		System.out.printf("Took %.3f seconds%n", time/1e9);
     		fos.close();
+    		
     		data = "";
     		Log.d(tag, "File written to storage");
     	} catch (Exception e){
@@ -468,12 +512,17 @@ public class MainActivity extends Activity implements
 		
 		DetectedActivity newActivity = ActivityRecognitionService.ACTIVITY;
 		if(!newActivity.equals(oldActivity)){
-			DetectedActivity activity = ActivityRecognitionService.ACTIVITY;
-			String activityName = Utils.getNameFromType(activity.getType());
-			int activityConfidence = activity.getConfidence();
+			oldActivity = newActivity;
+			String activityName = Utils.getNameFromType(newActivity.getType());
+			int activityConfidence = newActivity.getConfidence();
 			TextView tActivity = (TextView)findViewById(R.id.activity);
 	        tActivity.setText(activityName + "  "+ activityConfidence);	
 		}
+		// (attempt to) stop tracking when on foot.
+		//if(newActivity.equals(DetectedActivity.ON_FOOT)){
+		//	stopTracking();
+		//	((ToggleButton) (View)this.view).setChecked(false);// note entirely sure this works
+		//}
 		String locationString = "";
 		if (location == null){
 			 //get latest known location useful when you need location quickly

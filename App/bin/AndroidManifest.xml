@@ -58,6 +58,7 @@
         </service>
         <service android:name="uk.co.computicake.angela.thesis.UploadIntentService" />
         <service android:name="uk.co.computicake.angela.thesis.RecordDataIntentService" />
+        <service android:name="uk.co.computicake.angela.thesis.FileFinderIntentService" />
     </application>
 	
     

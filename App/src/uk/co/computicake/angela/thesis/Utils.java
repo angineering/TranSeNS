@@ -4,7 +4,7 @@ import com.google.android.gms.location.DetectedActivity;
 
 public final class Utils {
 	
-	protected static final boolean DEVELOPER_MODE = true;
+	protected static final boolean DEVELOPER_MODE = false;
 
 	protected final static String TAG = "thesis"; // app name
 	
