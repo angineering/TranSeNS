@@ -36,7 +36,7 @@ public class ActivityRecognitionService extends Service implements
 	private PendingIntent callbackIntent; 
 	private ActivityIntentReceiver resultReceiver;
 	private final boolean DEBUG = true;
-	private final int DETECTION_INTERVAL_MS = Utils.SECOND*60; //should really be every 5 minutes or so.
+	private final int DETECTION_INTERVAL_MS = Utils.MINUTE*2; //should really be every 5 minutes or so.
 	
 	public static DetectedActivity ACTIVITY;
 	

@@ -21,12 +21,18 @@ public class UploadIntentService extends IntentService {
 
 	@Override
 	protected void onHandleIntent(Intent intent) {
-		Log.d(TAG, "handling...");
+		
 		// fileTuple = [name, contents]
-		String[]  fileTuple = intent.getStringArrayExtra(Utils.FILE_TUPLE);
-		//String findFile = intent.getStringExtra(Utils.FIND_FILE);
-		if(fileTuple == null){			
+		boolean  findFile = intent.getBooleanExtra(Utils.FIND_FILE, false);
+		boolean uploadCurrent = intent.getBooleanExtra(Utils.UPLOAD_CURRENT, false);
+		String[] fileTuple = new String[2];
+		if(findFile){			
 			fileTuple = findFile();
+		} else if (uploadCurrent){
+			String json = "{\"docs\":" + MainActivity.data.toString() + "}";
+	    	String dbName = Utils.PREFIX +"-thesis-" + new Date().getTime();
+	    	fileTuple[0] = dbName;
+	    	fileTuple[1] = json;
 		}
 		RESTClient rc = new RESTClient();
 		

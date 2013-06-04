@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.concurrent.ExecutionException;
 
@@ -83,27 +84,36 @@ public class MainActivity extends Activity implements
 	private static final boolean DEBUG = false;
 	private static final boolean WARN = true;
 	private static final String LOC_SRV = "Location Services";
+	protected static final String prefix = "filtertest";
 	
 	private SensorManager sensorManager;
 	private Sensor accelerometer;
+	private Sensor rotationVector;
 	private ConnectivityManager connMgr;
 	private BroadcastReceiver receiver;
 	protected LocationClient locationClient;
 	protected Location location;
 	private LocationRequest locationRequest;
 	private final float NOISE = (float) 0.1; 
-	protected static String data = ""; // consider changing this to an array list. also do this in a nicer way than a static.
-	
+	private NoiseFilter noiseFilter;
+	//protected static String data = ""; // consider changing this to an array list. also do this in a nicer way than a static.
+	//protected static ArrayList<String> data;
+	protected static LL2<String> data;
+	private float[] accelVals; // to hold smoothed acceleration values
 	private DetectedActivity oldActivity;
 	
 	private ServiceConnection serviceConnection;
 	private boolean isBound = false;
 	
+	// IN RADIANS! Positive in the counter-clockwise direction
+	protected float azimut = 0; // rotation around z.  the angle between magnetic north and the device's y axis. 0 for north, 180 for south. 90 for east. 
+	protected float pitch = 0; // rotation around x. positive when the positive z axis rotates toward the positive y axis. +-180
+	protected float roll = 0;  // rotation y. positive when the positive z axis rotates toward the positive x axis. +-90
+	
 	// Graph
 	private LinearLayout layout;
 	private GraphicalView view;
 	private AccelerationTimeChart chart;
-	//private static Thread thread;
 	private float pos = 0;
 	
 	double oldSpeed = 0;
@@ -118,7 +128,7 @@ public class MainActivity extends Activity implements
                     .penaltyLog()
                     .build());
             StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder()
-                    //.detectLeakedClosableObjects()
+                    .detectLeakedClosableObjects()
                     .penaltyLog()
                     .penaltyDeath()
                     .build());
@@ -127,8 +137,9 @@ public class MainActivity extends Activity implements
         setContentView(R.layout.activity_main);
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
+        rotationVector = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
         connMgr  = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        
+        noiseFilter = new NoiseFilter();
         locationClient = new LocationClient(this, this, this);
 		locationClient.connect();
 	
@@ -149,6 +160,7 @@ public class MainActivity extends Activity implements
 			public void onReceive(Context context, Intent intent) {				
 				if(wifiConnected()){
 					Intent i = new Intent(MainActivity.this, UploadIntentService.class);
+					i.putExtra(Utils.FIND_FILE, true);
 					startService(i);					
 				}
 			}       	
@@ -272,11 +284,14 @@ public class MainActivity extends Activity implements
     	final String DEBUG_TAG = "Toggle Active";    	
     	boolean on = ((ToggleButton) view).isChecked();
     	if(DEBUG) Log.d(DEBUG_TAG, ""+ on);
-    	if(on){    		
+    	if(on){
+    		//data = new ArrayList<String>(2000);
+    		data = new LL2<String>();
     		//request updates
     		locationClient.requestLocationUpdates(locationRequest, this);           
             //Start tracking
-            sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+            sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL); //try setting a slower sensor delay
+            //sensorManager.registerListener(this, rotationVector, SensorManager.SENSOR_DELAY_NORMAL);
             doBindService();
             oldActivity = ActivityRecognitionService.ACTIVITY;
             TextView tAccel = (TextView)findViewById(R.id.speed);
@@ -298,7 +313,6 @@ public class MainActivity extends Activity implements
         tActivity.setText("");
 		sensorManager.unregisterListener(this);
 		locationClient.removeLocationUpdates(this);
-		// Clear chart
 		//chart.clear();
 		doUnbindService();
    		if(wifiConnected()){
@@ -306,7 +320,6 @@ public class MainActivity extends Activity implements
    		} else {
    			storeData();
    		}
-		data = ""; //technically doing this twice  if it's stored. decide where you want it.
     }
     
     @Override
@@ -318,11 +331,15 @@ public class MainActivity extends Activity implements
      * Uploads the data that has just been gathered to the db. 
      */
     private void sendCurrentData(){
-    	String json = "{\"docs\":[" + data + "]}";
-    	String dbName = "current-thesis-" + new Date().getTime();
+    	/*
+    	String json = "{\"docs\":" + data.toString() + "}";
+    	String dbName = prefix+"-thesis-" + new Date().getTime();
     	String[] fileTuple = {dbName, json};
-    	//send(fileTuple); 
     	new UploadFilesTask().execute(fileTuple); // as you can't send more than 1MB with putExtra. find other solution? Guess this works for now.
+    	*/
+    	Intent i = new Intent(MainActivity.this, UploadIntentService.class);
+    	i.putExtra(Utils.UPLOAD_CURRENT, true);
+		startService(i);
     }
     
     
@@ -330,13 +347,13 @@ public class MainActivity extends Activity implements
     /**
      * Starts a service sending the given data to the server
      * @param fileTuple [db name, contents] Data to be sent to the server
-     */
+     *//*
     private void send(String[] fileTuple){
     	Log.d("send", "sending...");
     	Intent intent = new Intent(MainActivity.this, UploadIntentService.class);
     	intent.putExtra(Utils.FILE_TUPLE, fileTuple);
     	startService(intent);
-    }
+    }*/
     
     // And for testing. try on SD card later in process, as files are likely to be huge. (NOTE: 10000 lines is 3 MB it seems)
     // contemplate moving into separate thread.
@@ -344,7 +361,7 @@ public class MainActivity extends Activity implements
      * Wrapper for storing recorded data
      */
     protected void storeData(){
-    	String filename = "thesis-" +new Date().getTime();
+    	String filename = prefix+"-thesis-" +new Date().getTime();
     	Log.v("Storing", filename);
     	storeInternally(filename);
     }
@@ -381,12 +398,12 @@ public class MainActivity extends Activity implements
 	 */
     private void storeInternally(String filename){
     	String tag = "InternalStorage";
-    	String json = "{\"docs\":[" + data + "]}";
+    	String json = "{\"docs\":" + data.toString()+ "}";
     	try{
     		FileOutputStream fos = openFileOutput(filename, Context.MODE_PRIVATE);
     		fos.write(json.getBytes());
     		fos.close();    		
-    		data = "";
+    		data = null;
     		Log.d(tag, "File written to storage");
     	} catch (Exception e){
     		Log.e(tag, "Could not store data.");
@@ -416,6 +433,11 @@ public class MainActivity extends Activity implements
 	public void onSensorChanged(SensorEvent event) {
 		final String DEBUG_TAG = "Sensor Changed";
 		if (DEBUG) Log.d(DEBUG_TAG, "Sensor change registered.");
+		
+		if(event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR){
+			normalisePhonePosition(event);
+			return;
+		}		
 		// We don't care about super-precision, as there is a lot of noise
 		DecimalFormat d = new DecimalFormat("#.##");
 		String shortAccel;
@@ -423,25 +445,59 @@ public class MainActivity extends Activity implements
 		float x = event.values[0];
 		float y = event.values[1];
 		float z = event.values[2];
-		double accel = Math.sqrt(x*x + y*y + z*z); 
-		
+		//float yn = (float) (y*Math.cos(roll));
+		//float xn = (float) (x*Math.cos(azimut));
+		//TODO: not sure why values is cloned.
+		accelVals = noiseFilter.lowPass(event.values.clone(), accelVals);
 		TextView tAccel = (TextView)findViewById(R.id.speed);
+	
+		x = accelVals[0];
+		y = accelVals[1];
+		z = accelVals[2];
 		
 		// we are standing still
+		/*
 		if(accel < NOISE){ 
-			tAccel.setText("0.00");
+			tAccel.setText("0.00");			
 			return;
-		}
-		shortAccel = d.format(accel);
-		tAccel.setText(shortAccel);
+		}*/
+		//shortAccel = d.format(accel);
+		/*
+		String xs = d.format(x);
+		String ys = d.format(y);
+		String zs = d.format(z);
+		tAccel.setText("X:"+xs+ " Y:"+ys+" Z: "+zs);
+		*/
+		String shortY = d.format(y);
+		String shortX = d.format(x);
+		String shortZ = d.format(z);
+		tAccel.setText("x: "+shortX+" y:"+shortY+" z:"+shortZ);
+		//tAccel.setText(shortAccel);
 		if (DEBUG) Log.d(DEBUG_TAG, "Acceleration: "+ shortAccel);
-
+		
 		// Add speed to the graph
-		Point p = new Point(pos++, Float.valueOf(shortAccel));
-		chart.addNewPoints(p);
+		float newPos = pos++;
+		Point p = new Point(newPos, Float.valueOf(shortX));
+		Point py = new Point(newPos, Float.valueOf(shortY));
+		Point pz = new Point(newPos, Float.valueOf(shortZ));
+		chart.addNewPoints(p, py, pz);
 		chart.adjust_x((int)pos);
 		view.repaint();  //commenting this out still gave quite a few GC_FOR_ALLOC
+		/*
+		new RecordDataTask().execute(shortAccel);
+		*/
+		// (attempt to) stop tracking when on foot.
+		//if(newActivity.equals(DetectedActivity.ON_FOOT)){
+		//	stopTracking();
+		//	((ToggleButton) (View)this.view).setChecked(false);// note entirely sure this works
+		//}
+		String[] accel = {shortX, shortY, shortZ};
+		record(accel);
 		
+	}
+    
+	// To test if the system waits for a void function or not:
+	private void record(String[] accel){
 		DetectedActivity newActivity = ActivityRecognitionService.ACTIVITY;
 		if(!newActivity.equals(oldActivity)){
 			oldActivity = newActivity;
@@ -450,12 +506,7 @@ public class MainActivity extends Activity implements
 			TextView tActivity = (TextView)findViewById(R.id.activity);
 	        tActivity.setText(activityName + "  "+ activityConfidence);	
 		}
-		// (attempt to) stop tracking when on foot.
-		//if(newActivity.equals(DetectedActivity.ON_FOOT)){
-		//	stopTracking();
-		//	((ToggleButton) (View)this.view).setChecked(false);// note entirely sure this works
-		//}
-		/*
+		
 		String locationString = "";
 		if (location == null){
 			 //get latest known location useful when you need location quickly
@@ -466,29 +517,10 @@ public class MainActivity extends Activity implements
 		}
         
 		Intent intent = new Intent(MainActivity.this, RecordDataIntentService.class);
-		intent.putExtra(Utils.ACCELERATION, shortAccel);
+		intent.putExtra(Utils.ACCELERATION, accel);
 		intent.putExtra(Utils.LOCATION, locationString);
 		startService(intent);	
-		*/	
-		//record(shortAccel);
-		new RecordDataTask().execute(shortAccel);
-	}
-    
-	// To test if the system waits for a void function or not:
-	private void record(String shortAccel){
-		String locationString = "";
-		if (location == null){
-			 //get latest known location useful when you need location quickly
-	      	location = locationClient.getLastLocation();
-		}
-		if (location != null){
-			locationString = location.getLatitude() + "," + location.getLongitude(); 
-		}
-        
-		Intent intent = new Intent(MainActivity.this, RecordDataIntentService.class);
-		intent.putExtra(Utils.ACCELERATION, shortAccel);
-		intent.putExtra(Utils.LOCATION, locationString);
-		startService(intent);	
+		
 	}
 	
 	private class RecordDataTask extends AsyncTask<String, Void, Void> {
@@ -523,7 +555,7 @@ public class MainActivity extends Activity implements
     		if(strings.length == 2){
     			db = strings[0];
     		} else {
-    			db = "async-thesis-" + new Date().getTime();
+    			db = prefix+"-thesis-" + new Date().getTime();
     		}
     		boolean result;
 			try {
@@ -583,6 +615,22 @@ public class MainActivity extends Activity implements
 			unbindService(serviceConnection);
 			isBound = false;
 		}	
+	}
+	
+	void normalisePhonePosition(SensorEvent event){
+		
+		float[] R = new float[9];
+		//float[] newR = new float[9];
+		float[] orientation = new float[3];
+		SensorManager.getRotationMatrixFromVector(R, event.values); // contemplate using magnetic and gravity instead. 
+		// should possibly do remapCoordinateSystem here
+		//SensorManager.remapCoordinateSystem(rotationMatrix, SensorManager.AXIS_X, SensorManager.AXIS_MINUS_Y, newRotationMatrix);
+		SensorManager.getOrientation(R, orientation);
+		
+		azimut = (float) Math.toDegrees(orientation[0]); // used to update compass bearing
+		pitch = (float) Math.toDegrees(orientation[1]);
+		roll = (float) Math.toDegrees(orientation[2]);
+		Log.i("normalise", "azi:"+azimut+" pitch:"+pitch+" roll:"+roll);
 	}
 
 }

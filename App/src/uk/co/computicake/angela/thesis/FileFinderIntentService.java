@@ -1,3 +1,5 @@
+// TODO: Delete. Not used anymore.
+
 package uk.co.computicake.angela.thesis;
 
 import java.io.BufferedReader;
@@ -58,9 +60,9 @@ public class FileFinderIntentService extends IntentService {
     	// send to uploader
     	Log.d("send", "sending...");
     	//String[] fileTuple2 = {"xxx","{docs:{}"};
-    	Intent i = new Intent(FileFinderIntentService.this, UploadIntentService.class);
-    	i.putExtra(Utils.FILE_TUPLE, fileTuple);
-    	startService(i);
+    	//Intent i = new Intent(FileFinderIntentService.this, UploadIntentService.class);
+    	//i.putExtra(Utils.FILE_TUPLE, fileTuple);
+    	//startService(i);
     	stopSelf();
 	}
 

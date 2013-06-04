@@ -26,11 +26,11 @@ public class RecordDataIntentService extends IntentService {
 	}
 
 	@Override
-	protected void onHandleIntent(Intent intent) {
+	protected synchronized void onHandleIntent(Intent intent) {
 		long time = new Date().getTime();
 		String dataPoint ="";
 		
-		String acceleration = intent.getStringExtra(Utils.ACCELERATION);
+		String[] acceleration = intent.getStringArrayExtra(Utils.ACCELERATION);
 		String location = intent.getStringExtra(Utils.LOCATION);
 		
 		DetectedActivity activity = ActivityRecognitionService.ACTIVITY;
@@ -41,8 +41,12 @@ public class RecordDataIntentService extends IntentService {
 			dataPoint = new JSONStringer().object()
 					.key("location")
 					.value(location)
-					.key("acceleration")
-					.value(Float.valueOf(acceleration))
+					.key("x")
+					.value(Float.valueOf(acceleration[0]))
+					.key("y")
+					.value(Float.valueOf(acceleration[1]))
+					.key("z")
+					.value(Float.valueOf(acceleration[2]))
 					.key("time")
 					.value(time)
 					.key("activityName")
@@ -55,7 +59,8 @@ public class RecordDataIntentService extends IntentService {
 			e.printStackTrace();
 		}
 		if(DEBUG) Log.d("dataPoint", dataPoint);
-		MainActivity.data = MainActivity.data.concat(dataPoint +","); //really want to comma separate. maybe use json object? try and see if it breaks		
+		//MainActivity.data = MainActivity.data.concat(dataPoint +","); //really want to comma separate. maybe use json object? try and see if it breaks	
+		MainActivity.data.add(dataPoint);
 		
 		stopSelf();
 	}
