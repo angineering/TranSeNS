@@ -90,17 +90,17 @@ public class LL2<T> implements Iterable<T> {
 	 * Returns a comma separated string of values enclosed in "[]".
 	 */
 	public synchronized String toString(){ // yeeeeeah. this is not working...	in main thread, taking up a fuckload of memory.	
-		String stringified = "[";
+		StringBuilder builder = new StringBuilder(count*Utils.APRX_JSON_LENGTH).append("[");
 		Iterator<T> it = this.iterator();
 		// to avoid ending with a comma
 		if(it.hasNext()){
-			stringified += it.next().toString();
+			builder.append(it.next().toString());
 		}
 		while(it.hasNext()){
-			stringified += ", "+ it.next().toString();
+			builder.append(", "+ it.next().toString());
 		}
-		stringified += "]"; 
-		return stringified;
+		builder.append("]"); 
+		return builder.toString();
 	}
 }
 

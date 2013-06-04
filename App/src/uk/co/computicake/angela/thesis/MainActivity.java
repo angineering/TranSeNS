@@ -106,7 +106,7 @@ public class MainActivity extends Activity implements
 	private boolean isBound = false;
 	
 	// IN RADIANS! Positive in the counter-clockwise direction
-	protected float azimut = 0; // rotation around z.  the angle between magnetic north and the device's y axis. 0 for north, 180 for south. 90 for east. 
+	protected float azimuth = 0; // rotation around z.  the angle between magnetic north and the device's y axis. 0 for north, 180 for south. 90 for east. 
 	protected float pitch = 0; // rotation around x. positive when the positive z axis rotates toward the positive y axis. +-180
 	protected float roll = 0;  // rotation y. positive when the positive z axis rotates toward the positive x axis. +-90
 	
@@ -291,7 +291,7 @@ public class MainActivity extends Activity implements
     		locationClient.requestLocationUpdates(locationRequest, this);           
             //Start tracking
             sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL); //try setting a slower sensor delay
-            //sensorManager.registerListener(this, rotationVector, SensorManager.SENSOR_DELAY_NORMAL);
+            sensorManager.registerListener(this, rotationVector, 1000000);
             doBindService();
             oldActivity = ActivityRecognitionService.ACTIVITY;
             TextView tAccel = (TextView)findViewById(R.id.speed);
@@ -435,7 +435,7 @@ public class MainActivity extends Activity implements
 		if (DEBUG) Log.d(DEBUG_TAG, "Sensor change registered.");
 		
 		if(event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR){
-			normalisePhonePosition(event);
+			normalisePhonePosition(event.values.clone());
 			return;
 		}		
 		// We don't care about super-precision, as there is a lot of noise
@@ -450,10 +450,13 @@ public class MainActivity extends Activity implements
 		//TODO: not sure why values is cloned.
 		accelVals = noiseFilter.lowPass(event.values.clone(), accelVals);
 		TextView tAccel = (TextView)findViewById(R.id.speed);
-	
+		
+		// filtered acceleration values
 		x = accelVals[0];
-		y = accelVals[1];
+		y = (float) (accelVals[1] * Math.sin(azimuth));
 		z = accelVals[2];
+		
+
 		
 		// we are standing still
 		/*
@@ -475,7 +478,8 @@ public class MainActivity extends Activity implements
 		//tAccel.setText(shortAccel);
 		if (DEBUG) Log.d(DEBUG_TAG, "Acceleration: "+ shortAccel);
 		
-		// Add speed to the graph
+		// note: this is slower the more graphs we have.
+		// Add measurement to the graph
 		float newPos = pos++;
 		Point p = new Point(newPos, Float.valueOf(shortX));
 		Point py = new Point(newPos, Float.valueOf(shortY));
@@ -617,20 +621,20 @@ public class MainActivity extends Activity implements
 		}	
 	}
 	
-	void normalisePhonePosition(SensorEvent event){
+	void normalisePhonePosition(float[] rotationValues){
 		
 		float[] R = new float[9];
 		//float[] newR = new float[9];
 		float[] orientation = new float[3];
-		SensorManager.getRotationMatrixFromVector(R, event.values); // contemplate using magnetic and gravity instead. 
-		// should possibly do remapCoordinateSystem here
-		//SensorManager.remapCoordinateSystem(rotationMatrix, SensorManager.AXIS_X, SensorManager.AXIS_MINUS_Y, newRotationMatrix);
+		SensorManager.getRotationMatrixFromVector(R, rotationValues);
 		SensorManager.getOrientation(R, orientation);
 		
-		azimut = (float) Math.toDegrees(orientation[0]); // used to update compass bearing
+		azimuth = (float) Math.toDegrees(orientation[0]); // used to update compass bearing
+		azimuth = azimuth >= 0 ? azimuth : azimuth + 360; // to use [0,360] instead of [-180, 180]
 		pitch = (float) Math.toDegrees(orientation[1]);
 		roll = (float) Math.toDegrees(orientation[2]);
-		Log.i("normalise", "azi:"+azimut+" pitch:"+pitch+" roll:"+roll);
+		Log.i("normalise", "azi:"+azimuth+" pitch:"+pitch+" roll:"+roll);
+		
 	}
 
 }

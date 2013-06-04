@@ -19,7 +19,7 @@ import android.widget.TextView;
  *
  */
 public class RecordDataIntentService extends IntentService {
-	private static final boolean DEBUG = false;
+	private static final boolean DEBUG = true;
 	
 	public RecordDataIntentService() {
 		super("RecordDataIntentService");
@@ -58,7 +58,7 @@ public class RecordDataIntentService extends IntentService {
 		} catch (JSONException e) {
 			e.printStackTrace();
 		}
-		if(DEBUG) Log.d("dataPoint", dataPoint);
+		if(DEBUG) Log.d("dataPoint", "length: "+dataPoint.length());
 		//MainActivity.data = MainActivity.data.concat(dataPoint +","); //really want to comma separate. maybe use json object? try and see if it breaks	
 		MainActivity.data.add(dataPoint);
 		
