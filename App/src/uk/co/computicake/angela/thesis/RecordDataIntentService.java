@@ -1,7 +1,5 @@
 package uk.co.computicake.angela.thesis;
 
-// TODO: What happens if new data wants to be recorded before this finishes?
-
 import java.util.Date;
 
 import org.json.JSONException;
@@ -11,15 +9,13 @@ import com.google.android.gms.location.DetectedActivity;
 
 import android.app.IntentService;
 import android.content.Intent;
-import android.util.Log;
-import android.widget.TextView;
+
 
 /**
  * Used to record relevant data each time the acceleration sensor changes
  *
  */
 public class RecordDataIntentService extends IntentService {
-	private static final boolean DEBUG = true;
 	
 	public RecordDataIntentService() {
 		super("RecordDataIntentService");
@@ -58,10 +54,7 @@ public class RecordDataIntentService extends IntentService {
 		} catch (JSONException e) {
 			e.printStackTrace();
 		}
-		if(DEBUG) Log.d("dataPoint", "length: "+dataPoint.length());
-		//MainActivity.data = MainActivity.data.concat(dataPoint +","); //really want to comma separate. maybe use json object? try and see if it breaks	
-		MainActivity.data.add(dataPoint);
-		
+		MainActivity.data.add(dataPoint);		
 		stopSelf();
 	}
 }

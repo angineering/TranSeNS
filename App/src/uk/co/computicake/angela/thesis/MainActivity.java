@@ -89,13 +89,16 @@ public class MainActivity extends Activity implements
 	private SensorManager sensorManager;
 	private Sensor accelerometer;
 	private Sensor rotationVector;
+	private Sensor gravitySensor;
+	private Sensor magnetometer; 
 	private ConnectivityManager connMgr;
 	private BroadcastReceiver receiver;
 	protected LocationClient locationClient;
 	protected Location location;
 	private LocationRequest locationRequest;
-	private final float NOISE = (float) 0.1; 
 	private NoiseFilter noiseFilter;
+	private float[] gravity;
+	private float[] geomagnetic;
 	//protected static String data = ""; // consider changing this to an array list. also do this in a nicer way than a static.
 	//protected static ArrayList<String> data;
 	protected static LL2<String> data;
@@ -107,8 +110,9 @@ public class MainActivity extends Activity implements
 	
 	// IN RADIANS! Positive in the counter-clockwise direction
 	protected float azimuth = 0; // rotation around z.  the angle between magnetic north and the device's y axis. 0 for north, 180 for south. 90 for east. 
-	protected float pitch = 0; // rotation around x. positive when the positive z axis rotates toward the positive y axis. +-180
-	protected float roll = 0;  // rotation y. positive when the positive z axis rotates toward the positive x axis. +-90
+	protected float pitch = 0; // rotation around x. positive when the positive z axis rotates toward the positive y axis. +-180. 
+	protected float roll = 0;  // rotation y. positive when the positive z axis rotates toward the positive x axis. +-90. Increases clockwise.
+	protected float[] rotationVals;
 	
 	// Graph
 	private LinearLayout layout;
@@ -138,6 +142,8 @@ public class MainActivity extends Activity implements
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
         rotationVector = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
+        gravitySensor = sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY);
+        magnetometer = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
         connMgr  = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         noiseFilter = new NoiseFilter();
         locationClient = new LocationClient(this, this, this);
@@ -291,7 +297,9 @@ public class MainActivity extends Activity implements
     		locationClient.requestLocationUpdates(locationRequest, this);           
             //Start tracking
             sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL); //try setting a slower sensor delay
-            sensorManager.registerListener(this, rotationVector, 1000000);
+            //sensorManager.registerListener(this, rotationVector, 1000000);
+            //sensorManager.registerListener(this, gravitySensor, 1000000);
+           // sensorManager.registerListener(this, magnetometer, 1000000);
             doBindService();
             oldActivity = ActivityRecognitionService.ACTIVITY;
             TextView tAccel = (TextView)findViewById(R.id.speed);
@@ -331,29 +339,10 @@ public class MainActivity extends Activity implements
      * Uploads the data that has just been gathered to the db. 
      */
     private void sendCurrentData(){
-    	/*
-    	String json = "{\"docs\":" + data.toString() + "}";
-    	String dbName = prefix+"-thesis-" + new Date().getTime();
-    	String[] fileTuple = {dbName, json};
-    	new UploadFilesTask().execute(fileTuple); // as you can't send more than 1MB with putExtra. find other solution? Guess this works for now.
-    	*/
     	Intent i = new Intent(MainActivity.this, UploadIntentService.class);
     	i.putExtra(Utils.UPLOAD_CURRENT, true);
 		startService(i);
     }
-    
-    
-    // PROBLEM: you can't pass an argument larger than 1MB to putExtra, so the data won't upload. 
-    /**
-     * Starts a service sending the given data to the server
-     * @param fileTuple [db name, contents] Data to be sent to the server
-     *//*
-    private void send(String[] fileTuple){
-    	Log.d("send", "sending...");
-    	Intent intent = new Intent(MainActivity.this, UploadIntentService.class);
-    	intent.putExtra(Utils.FILE_TUPLE, fileTuple);
-    	startService(intent);
-    }*/
     
     // And for testing. try on SD card later in process, as files are likely to be huge. (NOTE: 10000 lines is 3 MB it seems)
     // contemplate moving into separate thread.
@@ -361,54 +350,8 @@ public class MainActivity extends Activity implements
      * Wrapper for storing recorded data
      */
     protected void storeData(){
-    	String filename = prefix+"-thesis-" +new Date().getTime();
-    	Log.v("Storing", filename);
-    	storeInternally(filename);
-    }
-    
-    /*
-    private void storeExternally(String filename){
-    	String tag = "ExternalStorage";
-    	boolean sdAvailable = false;
-    	if(Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())){
-    		sdAvailable = true;
-    	}
-    	if(sdAvailable){
-	    	String root = Environment.getExternalStorageDirectory().toString();
-	    	File dir = new File(root + "/sensor_data");
-	    	dir.mkdir();
-	    	File file = new File(dir, filename);
-	    	try{
-	    		FileOutputStream out = new FileOutputStream(file);
-	    		out.write(data.getBytes());
-	    		out.close();
-	    		data = "";
-	    		Log.d(tag, "File written to storage");
-	    		
-	    	} catch (Exception e){
-	    		Log.e(tag, "Could not write file.");
-	    		e.printStackTrace();
-	    	}
-    	}   	
-    }
-    */
-    
-	/**
-	 * Store gathered data internally, for security
-	 */
-    private void storeInternally(String filename){
-    	String tag = "InternalStorage";
-    	String json = "{\"docs\":" + data.toString()+ "}";
-    	try{
-    		FileOutputStream fos = openFileOutput(filename, Context.MODE_PRIVATE);
-    		fos.write(json.getBytes());
-    		fos.close();    		
-    		data = null;
-    		Log.d(tag, "File written to storage");
-    	} catch (Exception e){
-    		Log.e(tag, "Could not store data.");
-    		e.printStackTrace();
-    	}   	
+    	Intent i = new Intent(this, StoreIntentService.class);
+		startService(i);
     }
     
     /**
@@ -433,11 +376,19 @@ public class MainActivity extends Activity implements
 	public void onSensorChanged(SensorEvent event) {
 		final String DEBUG_TAG = "Sensor Changed";
 		if (DEBUG) Log.d(DEBUG_TAG, "Sensor change registered.");
-		
+		/*
 		if(event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR){
 			normalisePhonePosition(event.values.clone());
 			return;
-		}		
+		}	
+		if(event.sensor.getType() == Sensor.TYPE_GRAVITY){
+			gravity = event.values.clone();
+			return;
+		}
+		if(event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD){
+			geomagnetic = event.values.clone();
+			return;
+		}*/
 		// We don't care about super-precision, as there is a lot of noise
 		DecimalFormat d = new DecimalFormat("#.##");
 		String shortAccel;
@@ -453,11 +404,37 @@ public class MainActivity extends Activity implements
 		
 		// filtered acceleration values
 		x = accelVals[0];
-		y = (float) (accelVals[1] * Math.sin(azimuth));
+		y = accelVals[1];
 		z = accelVals[2];
 		
-
+		/*
+		float[] accV = {x, y, z, 0}; 
+		float[] R = new float[16];
+		float[] I = new float[16];
+		float[] Rinv = new float[16];
+		float[] accRes = new float[4];
 		
+		if(gravity != null && geomagnetic != null){
+			SensorManager.getRotationMatrix(R, I, gravity, geomagnetic);
+			android.opengl.Matrix.invertM(Rinv, 0, R, 0);
+			android.opengl.Matrix.multiplyMV(accRes, 0, Rinv, 0, accV, 0);
+			
+			x = accRes[0];
+			y = accRes[1];
+			z = accRes[2];	
+		}
+		*/
+		/*
+		// this is odd. x and y seems to be almost the same... just with x happening right after y.
+		if(rotationVals != null){
+			SensorManager.getRotationMatrixFromVector(R, rotationVals);
+			//android.opengl.Matrix.invertM(Rinv, 0, R, 0);
+			android.opengl.Matrix.multiplyMV(accRes, 0, R, 0, accV, 0);
+		
+			x = accRes[0];
+			y = accRes[1];
+			z = accRes[2];		
+		}/*
 		// we are standing still
 		/*
 		if(accel < NOISE){ 
@@ -622,7 +599,7 @@ public class MainActivity extends Activity implements
 	}
 	
 	void normalisePhonePosition(float[] rotationValues){
-		
+		rotationVals = rotationValues;
 		float[] R = new float[9];
 		//float[] newR = new float[9];
 		float[] orientation = new float[3];

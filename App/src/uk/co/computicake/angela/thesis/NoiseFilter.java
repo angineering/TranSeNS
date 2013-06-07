@@ -8,7 +8,7 @@ public class NoiseFilter {
 	private static final float STILL_NOISE = (float) 0.1; 
 	private static final float TRESHOLD = (float)7.5; //allows 0 to 100 in 4 seconds
 	// Smoothing constant for low-pass filter. Smaller values mean more smoothing.
-	private static final float ALPHA = 0.15f;
+	private static final float ALPHA = 0.25f;
 
 	/**
 	 * Low pass filter applied to raw sensor data.

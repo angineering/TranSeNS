@@ -22,7 +22,6 @@ public class UploadIntentService extends IntentService {
 	@Override
 	protected void onHandleIntent(Intent intent) {
 		
-		// fileTuple = [name, contents]
 		boolean  findFile = intent.getBooleanExtra(Utils.FIND_FILE, false);
 		boolean uploadCurrent = intent.getBooleanExtra(Utils.UPLOAD_CURRENT, false);
 		String[] fileTuple = new String[2];
@@ -57,7 +56,8 @@ public class UploadIntentService extends IntentService {
 		}
 		if(!result){
 			Log.w(TAG, "Couldn't upload data. Saving...");
-			//storeData();
+			Intent i = new Intent(this, StoreIntentService.class);
+			startService(i);
 		}
 		
 		deleteFile(fileTuple[0]);
