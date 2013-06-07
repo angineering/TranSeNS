@@ -9,11 +9,11 @@ import java.util.Date;
 import android.app.IntentService;
 import android.content.Intent;
 import android.util.Log;
-import android.widget.Toast;
 
 
 public class UploadIntentService extends IntentService {
 	private final String TAG = "UploadIntentService";
+	private boolean DEBUG = false;
 	
 	public UploadIntentService() {
 		super("UploadIntentService");
@@ -57,6 +57,7 @@ public class UploadIntentService extends IntentService {
 		if(!result){
 			Log.w(TAG, "Couldn't upload data. Saving...");
 			Intent i = new Intent(this, StoreIntentService.class);
+			i.putExtra(Utils.FILENAME, fileTuple[0]);
 			startService(i);
 		}
 		
@@ -74,8 +75,8 @@ public class UploadIntentService extends IntentService {
     	//Log.d("findFile", "!!!"+fileList);
     	if (fileList == null || fileList.length == 0) return null;
     	String filename = fileList[0];
-    	Log.d("findFile", filename);
-    	Log.d("FileFinder", "Nr of files: "+fileList.length);
+    	if(DEBUG) Log.d("findFile", filename);
+    	if(DEBUG) Log.d("FileFinder", "Nr of files: "+fileList.length);
     	
     	try {
             InputStream inputStream = openFileInput(filename);
@@ -92,8 +93,10 @@ public class UploadIntentService extends IntentService {
                  
                 inputStream.close();
                 file = stringBuilder.toString();
-                long time = System.nanoTime() - start;
-        		System.out.printf("FileFinderService Took %.3f seconds%n", time/1e9);
+                if(DEBUG) {
+                	long time = System.nanoTime() - start;               
+                	System.out.printf("FileFinderService Took %.3f seconds%n", time/1e9);
+                }
             }
         }catch (IOException e){
     		Log.w("FindFile", "File not found.");

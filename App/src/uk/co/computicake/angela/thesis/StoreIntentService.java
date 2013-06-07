@@ -21,7 +21,10 @@ public class StoreIntentService extends IntentService {
 	@Override
 	protected void onHandleIntent(Intent intent) {
 		String tag = "InternalStorage";
-		String filename = Utils.PREFIX+"-thesis-" +new Date().getTime();
+		String filename = intent.getStringExtra(Utils.FILENAME);
+		if(filename == null){
+			filename = Utils.PREFIX+"-thesis-" +new Date().getTime();
+		}
     	Log.v("Storing", filename);
     	String json = "{\"docs\":" + MainActivity.data.toString()+ "}";
     	try{

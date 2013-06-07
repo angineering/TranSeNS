@@ -23,8 +23,11 @@ public final class Utils {
 	protected static final String LOCATION = "uk.co.computicake.angela.thesis.LOCATION";
 	protected static final String DATA = "uk.co.computicake.angela.thesis.DATA";
 	protected static final String UPLOAD_CURRENT = "uk.co.computicake.angela.thesis.UPLOAD_CURRENT";
+	public static final String FILENAME = "uk.co.computicake.angela.thesis.FILENAME";
 	
 	protected static final String designDoc = "{'_id':'_design/example', 'language': 'javascript','views': { 'locs': { 'map': 'function(doc) {\n  emit(doc.location, doc.time);\n}', 'reduce': 'function(key, values){\n  return values[0];\n}'}}";
+
+	
        /*"acc": {
            "map": "function(doc) {\n  var time = (doc.time/1000)*1000;\n  emit(time, doc.speed);\n}",
            "reduce": "function(key, vals){\n  var avg = sum(vals)/vals.length;\n  return avg;\n\n}"
