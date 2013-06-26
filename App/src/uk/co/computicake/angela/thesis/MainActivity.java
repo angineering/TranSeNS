@@ -16,6 +16,7 @@ import java.io.InputStreamReader;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 import android.hardware.Sensor;
@@ -99,12 +100,9 @@ public class MainActivity extends Activity implements
 	private NoiseFilter noiseFilter;
 	private float[] gravity;
 	private float[] geomagnetic;
-	//protected static String data = ""; // consider changing this to an array list. also do this in a nicer way than a static.
-	//protected static ArrayList<String> data;
 	protected static LL2<String> data;
 	private float[] accelVals; // to hold smoothed acceleration values
 	private DetectedActivity oldActivity;
-	
 	private ServiceConnection serviceConnection;
 	private boolean isBound = false;
 	
@@ -396,6 +394,7 @@ public class MainActivity extends Activity implements
 		float x = event.values[0];
 		float y = event.values[1];
 		float z = event.values[2];
+	
 		//float yn = (float) (y*Math.cos(roll));
 		//float xn = (float) (x*Math.cos(azimut));
 		//TODO: not sure why values is cloned.
@@ -462,7 +461,7 @@ public class MainActivity extends Activity implements
 		Point py = new Point(newPos, Float.valueOf(shortY));
 		Point pz = new Point(newPos, Float.valueOf(shortZ));
 		chart.addNewPoints(p, py, pz);
-		chart.adjust_x((int)pos);
+		chart.adjust_x((int)newPos);
 		view.repaint();  //commenting this out still gave quite a few GC_FOR_ALLOC
 		/*
 		new RecordDataTask().execute(shortAccel);
@@ -504,63 +503,6 @@ public class MainActivity extends Activity implements
 		
 	}
 	
-	private class RecordDataTask extends AsyncTask<String, Void, Void> {
-
-		@Override
-		protected Void doInBackground(String... params) {
-			String shortAccel = params[0];
-			String locationString = "";
-			if (location == null){
-				 //get latest known location useful when you need location quickly
-		      	location = locationClient.getLastLocation();
-			}
-			if (location != null){
-				locationString = location.getLatitude() + "," + location.getLongitude(); 
-			}
-	        
-			Intent intent = new Intent(MainActivity.this, RecordDataIntentService.class);
-			intent.putExtra(Utils.ACCELERATION, shortAccel);
-			intent.putExtra(Utils.LOCATION, locationString);
-			startService(intent);
-			return null;
-		}
-		
-	}
-	
-    
-    private class UploadFilesTask extends AsyncTask<String, Void, Boolean> { //if you make this into a service it has higher priority and is less likely to be killed by the os.
-    	// Do long-running work in here
-    	protected Boolean doInBackground(String...strings ){
-    		RESTClient rc = new RESTClient();
-    		String db;
-    		if(strings.length == 2){
-    			db = strings[0];
-    		} else {
-    			db = prefix+"-thesis-" + new Date().getTime();
-    		}
-    		boolean result;
-			try {
-				result = rc.checkServer();
-				if(result){ // not sure if this is strictly necessary, as we are within a try/catch
-					rc.createDB(db);
-					rc.addDocuments(db, strings[1]);
-				}
-			} catch (Exception e) {
-				result = false;
-				e.printStackTrace();
-			}
-    		return result;
-    	}
-    	
-    	// Is called when doInBackground finishes
-    	protected void onPostExecute(Boolean result){
-    		// if we for some reason can't reach the server
-    		if(!result){
-    			storeData();
-    		}
-    	}
-    }
-
 	@Override
 	public void onConnectionFailed(ConnectionResult result) {
 		// TODO Auto-generated method stub

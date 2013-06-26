@@ -20,7 +20,6 @@ public class StoreIntentService extends IntentService {
 
 	@Override
 	protected void onHandleIntent(Intent intent) {
-		String tag = "InternalStorage";
 		String filename = intent.getStringExtra(Utils.FILENAME);
 		if(filename == null){
 			filename = Utils.PREFIX+"-thesis-" +new Date().getTime();
@@ -32,9 +31,9 @@ public class StoreIntentService extends IntentService {
     		fos.write(json.getBytes());
     		fos.close();    		
     		MainActivity.data = null;
-    		Log.d(tag, "File written to storage");
+    		Log.d(Utils.TAG, "File written to storage");
     	} catch (Exception e){
-    		Log.e(tag, "Could not store data.");
+    		Log.e(Utils.TAG, "Could not store data.");
     		e.printStackTrace();
     	}   	
 		

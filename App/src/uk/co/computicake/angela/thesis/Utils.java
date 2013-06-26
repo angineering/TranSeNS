@@ -14,7 +14,8 @@ public final class Utils {
 	protected static final int CONNECTION_FAILURE_RESOLUTION_REQUEST = 9000;
 	protected static final int CALIBRATION_INTERVAL = MINUTE*2;
 	protected static final int APRX_JSON_LENGTH = 134; // generally varies between 126 and 136, with the majority of values being 130+
-	protected static final String PREFIX = "filtertest25";
+	protected static final String PREFIX = "nathan3";
+	protected static final float NOISE = 0.1f;
 	
 	// Should these be component names? Should they have the activity name instead of random string? No, because they're extras data
 	protected static final String FIND_FILE = "uk.co.computicake.angela.thesis.FIND_FILE";
@@ -25,7 +26,7 @@ public final class Utils {
 	protected static final String UPLOAD_CURRENT = "uk.co.computicake.angela.thesis.UPLOAD_CURRENT";
 	public static final String FILENAME = "uk.co.computicake.angela.thesis.FILENAME";
 	
-	protected static final String designDoc = "{'_id':'_design/example', 'language': 'javascript','views': { 'locs': { 'map': 'function(doc) {\n  emit(doc.location, doc.time);\n}', 'reduce': 'function(key, values){\n  return values[0];\n}'}}";
+	//protected static final String designDoc = "{'_id':'_design/example', 'language': 'javascript','views': { 'locs': { 'map': 'function(doc) {\n  emit(doc.location, doc.time);\n}', 'reduce': 'function(key, values){\n  return values[0];\n}'}}";
 
 	
        /*"acc": {

@@ -12,7 +12,6 @@ import android.util.Log;
 
 
 public class UploadIntentService extends IntentService {
-	private final String TAG = "UploadIntentService";
 	private boolean DEBUG = false;
 	
 	public UploadIntentService() {
@@ -36,32 +35,37 @@ public class UploadIntentService extends IntentService {
 		RESTClient rc = new RESTClient();
 		
 		if(fileTuple == null){
-			Log.d(TAG, "No data passed");
+			Log.d(Utils.TAG, "No data passed for uploading");
 			stopSelf();
 			return;
 		}
 		
 		String db = fileTuple[0];
-		Log.d(TAG, "attempting to uplad "+db);
+		Log.d(Utils.TAG, "attempting to uplad "+db);
 		boolean result;
+		boolean uploaded = false;
 		try {
 			result = rc.checkServer();
 			if(result){ // not sure if this is strictly necessary, as we are within a try/catch
 				rc.createDB(db);
-				rc.addDocuments(db, fileTuple[1]);
+				uploaded = rc.addDocuments(db, fileTuple[1]);
 			}
 		} catch (Exception e) {
 			result = false;
+			uploaded = false;
 			e.printStackTrace();
 		}
-		if(!result){
-			Log.w(TAG, "Couldn't upload data. Saving...");
+		
+		// We only want to store the data if it doesn't already exist in the file system
+		if((!result || !uploaded) && !findFile){
+			Log.w(Utils.TAG, "Couldn't connect to server. Saving...");
 			Intent i = new Intent(this, StoreIntentService.class);
 			i.putExtra(Utils.FILENAME, fileTuple[0]);
 			startService(i);
+		// If it is stored and uploaded successfully, delete
+		} else if (findFile && uploaded) {
+			deleteFile(fileTuple[0]);
 		}
-		
-		deleteFile(fileTuple[0]);
 		stopSelf();
 	}
 	
@@ -72,11 +76,10 @@ public class UploadIntentService extends IntentService {
     private String[] findFile(){
     	String file = "";
     	String[] fileList = fileList();
-    	//Log.d("findFile", "!!!"+fileList);
     	if (fileList == null || fileList.length == 0) return null;
     	String filename = fileList[0];
-    	if(DEBUG) Log.d("findFile", filename);
-    	if(DEBUG) Log.d("FileFinder", "Nr of files: "+fileList.length);
+    	if(DEBUG) Log.d(Utils.TAG, "find file:"+ filename);
+    	if(DEBUG) Log.d(Utils.TAG, "Nr of files: "+fileList.length);
     	
     	try {
             InputStream inputStream = openFileInput(filename);
@@ -99,13 +102,11 @@ public class UploadIntentService extends IntentService {
                 }
             }
         }catch (IOException e){
-    		Log.w("FindFile", "File not found.");
+    		Log.w(Utils.TAG, "Find file: File not found.");
     		e.printStackTrace();
-    	} finally {
-    		
-    	}
+    	} 
     	String[] fileTuple =  {filename, file};
-    	Log.d("FileFinder", filename+ " size:"+file.length());
+    	if(DEBUG)Log.d(Utils.TAG, "Found "+ filename+ " size:"+file.length());
     	return fileTuple;	
     }
     
