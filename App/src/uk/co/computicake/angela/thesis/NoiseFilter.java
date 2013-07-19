@@ -24,11 +24,5 @@ public class NoiseFilter {
 	    output[2] = output[2] + ALPHA_Z * (input[2] - output[2]);
 	    return output;
 	}
-	
-	/**
-	 * Applied to re-oriented accelerometer data.
-	 */
-	public void postLPF(){
-		
-	}
+
 }
