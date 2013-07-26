@@ -1,3 +1,5 @@
+// TODO: Mark for deletion.
+
 package uk.co.computicake.angela.thesis;
 
 import android.content.BroadcastReceiver;

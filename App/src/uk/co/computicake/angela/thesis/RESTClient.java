@@ -1,5 +1,4 @@
-// NOTE: Code copied from pervasive coursework
-//TODO: Change String return types to boolean
+//TODO ssl encryption!
 package uk.co.computicake.angela.thesis;
 
 import org.apache.http.conn.scheme.Scheme;
@@ -18,7 +17,9 @@ import org.restlet.resource.ClientResource;
 
 import android.util.Log;
 
-
+/**
+ * Class handling connection to a central db and uploading of data.
+ */
 public class RESTClient {
 	
 	// GUEST permissions, not admin. only for uploading and not for reading data.
@@ -124,7 +125,7 @@ public class RESTClient {
         resource.getReference().setLastSegment(db+"/_bulk_docs");
         boolean result;
         try{
-            resource.post(new StringRepresentation(file, MediaType.APPLICATION_JSON)).getText();
+            resource.post(new StringRepresentation(file, MediaType.APPLICATION_JSON));
             response = "success " + db;
             result = true;
         } catch(Exception e){
@@ -132,7 +133,7 @@ public class RESTClient {
             response = "Could not bulk add documents";
             result = false;
         }
-        Log.i("Add documents", response);
+        Log.i(Utils.TAG, "Add documents: "+response);
         return result;
     }
 
