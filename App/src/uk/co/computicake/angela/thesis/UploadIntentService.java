@@ -10,7 +10,10 @@ import android.app.IntentService;
 import android.content.Intent;
 import android.util.Log;
 
-
+/**
+ * Uploads a trip to the central database. 
+ * If no current trip is specified, an previously recorded trip is uploaded and deleted from memory. 
+ */
 public class UploadIntentService extends IntentService {
 	private boolean DEBUG = false;
 	
@@ -46,7 +49,7 @@ public class UploadIntentService extends IntentService {
 		boolean uploaded = false;
 		try {
 			result = rc.checkServer();
-			if(result){ // not sure if this is strictly necessary, as we are within a try/catch
+			if(result){
 				rc.createDB(db);
 				uploaded = rc.addDocuments(db, fileTuple[1]);
 			}

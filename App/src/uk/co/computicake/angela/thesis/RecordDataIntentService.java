@@ -12,7 +12,7 @@ import android.content.Intent;
 
 
 /**
- * Used to record relevant data each time the acceleration sensor changes
+ * Records relevant data each time the acceleration sensor changes.
  *
  */
 public class RecordDataIntentService extends IntentService {

@@ -1,5 +1,4 @@
-// NOTE: Code copied from pervasive coursework
-//TODO: Change String return types to boolean
+//TODO ssl encryption!
 package uk.co.computicake.angela.thesis;
 
 import org.apache.http.conn.scheme.Scheme;
@@ -18,7 +17,9 @@ import org.restlet.resource.ClientResource;
 
 import android.util.Log;
 
-
+/**
+ * Class handling connection to a central db and uploading of data.
+ */
 public class RESTClient {
 	
 	// GUEST permissions, not admin. only for uploading and not for reading data.

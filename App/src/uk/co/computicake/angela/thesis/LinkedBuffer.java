@@ -3,23 +3,28 @@ package uk.co.computicake.angela.thesis;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-public class LL2<T> implements Iterable<T> {
+/**
+ * Thread safe linked buffer without random access support.
+ * Only tail or head can be accessed. 
+ * @param <T>
+ */
+public class LinkedBuffer<T> implements Iterable<T> {
 
 	@Override
 	public Iterator<T> iterator() {
 		return new Iterator<T>() {
-			private Container<T> curr = new Container<T>(null, LL2.this.head, null);
+			private Container<T> curr = new Container<T>(null, LinkedBuffer.this.head, null);
 
 			@Override
 			public boolean hasNext() {
-				synchronized (LL2.this) {
+				synchronized (LinkedBuffer.this) {
 					return curr.next != null;
 				}
 			}
 
 			@Override
 			public T next() {
-				synchronized (LL2.this) {
+				synchronized (LinkedBuffer.this) {
 					if (hasNext()) {
 						curr = curr.next;
 						return curr.data;
@@ -53,8 +58,7 @@ public class LL2<T> implements Iterable<T> {
 	private Container<T> tail = null;
 	private int count = 0;
 
-	public LL2(){
-		// Nothing to see here. Move along, citizen!
+	public LinkedBuffer(){
 	}
 
 	public synchronized void add(T data)

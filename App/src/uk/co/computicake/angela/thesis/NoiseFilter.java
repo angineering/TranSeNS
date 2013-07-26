@@ -1,9 +1,8 @@
+package uk.co.computicake.angela.thesis;
+
 /**
  * Low pass filters for reducing sensor noise
  */
-
-package uk.co.computicake.angela.thesis;
-
 public class NoiseFilter {
 	private static final float STILL_NOISE = (float) 0.1; 
 	private static final float TRESHOLD = (float)10; //allows 0 to 100 in 4 seconds

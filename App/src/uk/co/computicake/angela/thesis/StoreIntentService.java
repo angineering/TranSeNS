@@ -1,7 +1,3 @@
-/**
- * Stores gathered data internally, for security reasons.
- */
-
 package uk.co.computicake.angela.thesis;
 
 import java.io.FileOutputStream;
@@ -12,6 +8,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 
+/**
+ * Stores gathered data internally, for security reasons.
+ */
 public class StoreIntentService extends IntentService {
 
 	public StoreIntentService() {

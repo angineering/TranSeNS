@@ -1,7 +1,5 @@
 package uk.co.computicake.angela.thesis;
 
-// TODO implement threading. Doing too much work on main thread!
-// TODO should really use Play location services, but can't figure out how the fuck to make them work >.> Wiki code won't run...
 // TODO add checks for checking that google play services is available
 // TODO have icon on status bar when running (since is supposed to be a background program really)
 
@@ -90,17 +88,13 @@ public class MainActivity extends Activity implements
 	private SensorManager sensorManager;
 	private Sensor accelerometer;
 	private Sensor rotationVector;
-	private Sensor gravitySensor;
-	private Sensor magnetometer; 
 	private ConnectivityManager connMgr;
 	private BroadcastReceiver receiver;
 	protected LocationClient locationClient;
 	protected Location location;
 	private LocationRequest locationRequest;
 	private NoiseFilter noiseFilter;
-	private float[] gravity;
-	private float[] geomagnetic;
-	protected static LL2<String> data;
+	protected static LinkedBuffer<String> data;
 	private float[] accelVals; // to hold smoothed acceleration values
 	private DetectedActivity oldActivity;
 	private ServiceConnection serviceConnection;
@@ -140,8 +134,6 @@ public class MainActivity extends Activity implements
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
         rotationVector = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
-        gravitySensor = sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY);
-        magnetometer = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
         connMgr  = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         noiseFilter = new NoiseFilter();
         locationClient = new LocationClient(this, this, this);
@@ -289,15 +281,11 @@ public class MainActivity extends Activity implements
     	boolean on = ((ToggleButton) view).isChecked();
     	if(DEBUG) Log.d(DEBUG_TAG, ""+ on);
     	if(on){
-    		//data = new ArrayList<String>(2000);
-    		data = new LL2<String>();
-    		//request updates
-    		locationClient.requestLocationUpdates(locationRequest, this);           
-            //Start tracking
-            sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL); //try setting a slower sensor delay
+    		data = new LinkedBuffer<String>();
+    		//request updates and start tracking
+    		locationClient.requestLocationUpdates(locationRequest, this);
+            sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
             //sensorManager.registerListener(this, rotationVector, 1000000);
-            //sensorManager.registerListener(this, gravitySensor, 1000000);
-           // sensorManager.registerListener(this, magnetometer, 1000000);
             doBindService();
             oldActivity = ActivityRecognitionService.ACTIVITY;
             TextView tAccel = (TextView)findViewById(R.id.speed);
@@ -374,19 +362,7 @@ public class MainActivity extends Activity implements
 	public void onSensorChanged(SensorEvent event) {
 		final String DEBUG_TAG = "Sensor Changed";
 		if (DEBUG) Log.d(DEBUG_TAG, "Sensor change registered.");
-		/*
-		if(event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR){
-			normalisePhonePosition(event.values.clone());
-			return;
-		}	
-		if(event.sensor.getType() == Sensor.TYPE_GRAVITY){
-			gravity = event.values.clone();
-			return;
-		}
-		if(event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD){
-			geomagnetic = event.values.clone();
-			return;
-		}*/
+
 		// We don't care about super-precision, as there is a lot of noise
 		DecimalFormat d = new DecimalFormat("#.##");
 		String shortAccel;
@@ -394,10 +370,7 @@ public class MainActivity extends Activity implements
 		float x = event.values[0];
 		float y = event.values[1];
 		float z = event.values[2];
-	
-		//float yn = (float) (y*Math.cos(roll));
-		//float xn = (float) (x*Math.cos(azimut));
-		//TODO: not sure why values is cloned.
+
 		accelVals = noiseFilter.lowPass(event.values.clone(), accelVals);
 		TextView tAccel = (TextView)findViewById(R.id.speed);
 		
@@ -539,7 +512,7 @@ public class MainActivity extends Activity implements
 			isBound = false;
 		}	
 	}
-	
+	/*
 	void normalisePhonePosition(float[] rotationValues){
 		rotationVals = rotationValues;
 		float[] R = new float[9];
@@ -554,6 +527,6 @@ public class MainActivity extends Activity implements
 		roll = (float) Math.toDegrees(orientation[2]);
 		Log.i("normalise", "azi:"+azimuth+" pitch:"+pitch+" roll:"+roll);
 		
-	}
+	}*/
 
 }
