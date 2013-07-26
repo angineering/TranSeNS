@@ -11,8 +11,8 @@ import android.content.Intent;
 import android.util.Log;
 
 /**
- * Uploads a trip to the central database. 
- * If no current trip is specified, an previously recorded trip is uploaded and deleted from memory. 
+ * Uploads trips to the central database. 
+ * If no current trip is specified, previously recorded trips are uploaded and deleted from memory. 
  */
 public class UploadIntentService extends IntentService {
 	private boolean DEBUG = false;
@@ -24,7 +24,7 @@ public class UploadIntentService extends IntentService {
 	@Override
 	protected void onHandleIntent(Intent intent) {
 		
-		boolean  findFile = intent.getBooleanExtra(Utils.FIND_FILE, false);
+		boolean findFile = intent.getBooleanExtra(Utils.FIND_FILE, false);
 		boolean uploadCurrent = intent.getBooleanExtra(Utils.UPLOAD_CURRENT, false);
 		String[] fileTuple = new String[2];
 		if(findFile){			
@@ -35,16 +35,29 @@ public class UploadIntentService extends IntentService {
 	    	fileTuple[0] = dbName;
 	    	fileTuple[1] = json;
 		}
-		RESTClient rc = new RESTClient();
-		
+
+		while(upload(fileTuple, findFile)){
+			fileTuple = findFile();
+			findFile = true;
+		}
+		stopSelf();
+	}
+	
+	/**
+	 * Handles uploading of a file to the server. 
+	 * @param fileTuple
+	 * @param foundFile
+	 * @return true if file was uploaded successfully
+	 */
+	private boolean upload(String[] fileTuple, boolean foundFile){
 		if(fileTuple == null){
 			Log.d(Utils.TAG, "No data passed for uploading");
-			stopSelf();
-			return;
+			return false;
 		}
 		
+		RESTClient rc = new RESTClient();
 		String db = fileTuple[0];
-		Log.d(Utils.TAG, "attempting to uplad "+db);
+		Log.d(Utils.TAG, "attempting to upload "+db);
 		boolean result;
 		boolean uploaded = false;
 		try {
@@ -59,18 +72,28 @@ public class UploadIntentService extends IntentService {
 			e.printStackTrace();
 		}
 		
-		// We only want to store the data if it doesn't already exist in the file system
-		if((!result || !uploaded) && !findFile){
+		// We only want to store the data if it doesn't already exist in the
+		// file system and didn't upload successfully
+		if((!result || !uploaded) && !foundFile){
 			Log.w(Utils.TAG, "Couldn't connect to server. Saving...");
 			Intent i = new Intent(this, StoreIntentService.class);
 			i.putExtra(Utils.FILENAME, fileTuple[0]);
 			startService(i);
-		// If it is stored and uploaded successfully, delete
-		} else if (findFile && uploaded) {
-			deleteFile(fileTuple[0]);
+			return false;
 		}
-		stopSelf();
+		// File was stored and uploaded successfully; delete
+		else if (foundFile && uploaded) {
+			deleteFile(fileTuple[0]);
+			return true;
+		}
+		// An already stored file could not be uploaded
+		else if (!result || !uploaded){
+			return false;
+		}
+		// A trip that has just been recorded uploaded successfully.
+		return true;
 	}
+	
 	
 	/**
      * Finds a file that has been stored on the internal hdd.
