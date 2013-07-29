@@ -96,7 +96,7 @@ public class MainActivity extends Activity implements
 	private NoiseFilter noiseFilter;
 	protected static LinkedBuffer<String> data;
 	private float[] accelVals; // to hold smoothed acceleration values
-	private DetectedActivity oldActivity;
+	//private DetectedActivity oldActivity;
 	private ServiceConnection serviceConnection;
 	private boolean isBound = false;
 	
@@ -255,10 +255,32 @@ public class MainActivity extends Activity implements
     	switch (item.getItemId()){
     	case R.id.kill:
     		finish();
+    	case R.id.help:
+    		showHelpDialog();
     	default:
     		return super.onOptionsItemSelected(item);
     	}
     }    
+    
+    /*
+     * Shows a help text in an alert box.
+     */
+    public void showHelpDialog(){
+    	String help_text = "Recording:\n Press 'Start Tracking' to start recording data. Press 'Stop Tracking' to stop recording. Make sure GPS and WiFi is enabled for best results.\n\n"+
+    			"Placement:\n Horizontal with the top of the phone facing in the direction of travel. The screen should be visible.\n\n"+
+    			"Axes:\n Axes are measured in the phone coordinate system as vectors. Z points out of the screen, Y out of the top and X out of the right side of your phone.\n\n"+
+    			"Graph:\n The graph displays acceleration as a function of data points. Blue is X, red is Y and white is Z.";
+    	AlertDialog.Builder builder = new AlertDialog.Builder(this);
+    	builder.setMessage(help_text)
+    		.setNeutralButton("Close", new DialogInterface.OnClickListener(){
+				@Override
+				public void onClick(DialogInterface dialog, int which) {
+					dialog.dismiss();					
+				}
+    		})
+    		.setTitle("Help");
+    	builder.show();
+    }
     
     // last thing called after finish 
     public void onDestroy() {
@@ -287,11 +309,11 @@ public class MainActivity extends Activity implements
             sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
             //sensorManager.registerListener(this, rotationVector, 1000000);
             doBindService();
-            oldActivity = ActivityRecognitionService.ACTIVITY;
+            //oldActivity = ActivityRecognitionService.ACTIVITY;
             TextView tAccel = (TextView)findViewById(R.id.speed);
             tAccel.setText("0.00");
-            TextView tActivity = (TextView)findViewById(R.id.activity);
-            tActivity.setText("Unknown 0");
+           // TextView tActivity = (TextView)findViewById(R.id.activity);
+           // tActivity.setText("Unknown 0");
     	} else {
     		stopTracking();
     	}
@@ -451,6 +473,7 @@ public class MainActivity extends Activity implements
     
 	// To test if the system waits for a void function or not:
 	private void record(String[] accel){
+		/*// Not interested in showing this anymore. Have confirmed that as long as phone is still in vehicle, it should generally show vehicle/still/unknown
 		DetectedActivity newActivity = ActivityRecognitionService.ACTIVITY;
 		if(!newActivity.equals(oldActivity)){
 			oldActivity = newActivity;
@@ -459,7 +482,7 @@ public class MainActivity extends Activity implements
 			TextView tActivity = (TextView)findViewById(R.id.activity);
 	        tActivity.setText(activityName + "  "+ activityConfidence);	
 		}
-		
+		*/
 		String locationString = "";
 		if (location == null){
 			 //get latest known location useful when you need location quickly

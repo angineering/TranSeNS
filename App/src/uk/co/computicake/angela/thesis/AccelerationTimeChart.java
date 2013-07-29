@@ -31,9 +31,9 @@ public class AccelerationTimeChart {
 	
 	public AccelerationTimeChart() {
 		
-		datasetx = new TimeSeries("Acceleration");
-		datasety = new TimeSeries("Accy");
-		datasetz = new TimeSeries("Accz");
+		datasetx = new TimeSeries("Acc X");
+		datasety = new TimeSeries("Acc Y");
+		datasetz = new TimeSeries("Acc Z");
 		mDataset = new XYMultipleSeriesDataset();
 		mDataset.addSeries(datasetx);
 		mDataset.addSeries(datasety);
