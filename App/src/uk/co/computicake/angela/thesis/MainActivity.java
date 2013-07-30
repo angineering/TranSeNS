@@ -25,16 +25,20 @@ import android.location.Location;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.IBinder;
 import android.os.StrictMode;
 import android.provider.Settings;
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.AlertDialog.Builder;
 import android.app.Dialog;
 import android.app.IntentService;
+import android.app.Notification;
+import android.app.NotificationManager;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -88,6 +92,7 @@ public class MainActivity extends Activity implements
 	private SensorManager sensorManager;
 	private Sensor accelerometer;
 	private Sensor rotationVector;
+	private NotificationManager notificationMgr;
 	private ConnectivityManager connMgr;
 	private BroadcastReceiver receiver;
 	protected LocationClient locationClient;
@@ -99,6 +104,7 @@ public class MainActivity extends Activity implements
 	//private DetectedActivity oldActivity;
 	private ServiceConnection serviceConnection;
 	private boolean isBound = false;
+	private int notificationID = 1;
 	
 	// IN RADIANS! Positive in the counter-clockwise direction
 	protected float azimuth = 0; // rotation around z.  the angle between magnetic north and the device's y axis. 0 for north, 180 for south. 90 for east. 
@@ -135,6 +141,7 @@ public class MainActivity extends Activity implements
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
         rotationVector = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
         connMgr  = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        notificationMgr =  (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         noiseFilter = new NoiseFilter();
         locationClient = new LocationClient(this, this, this);
 		locationClient.connect();
@@ -262,7 +269,7 @@ public class MainActivity extends Activity implements
     	}
     }    
     
-    /*
+    /**
      * Shows a help text in an alert box.
      */
     public void showHelpDialog(){
@@ -280,6 +287,16 @@ public class MainActivity extends Activity implements
     		})
     		.setTitle("Help");
     	builder.show();
+    }
+    
+ 
+	public Notification.Builder notification(){
+    	 Notification.Builder notification = new Notification.Builder(this)
+         .setContentTitle("Recording trip")
+         .setContentText("Please stop tracking before moving the phone.")
+         .setSmallIcon(R.drawable.app_icon_notification);
+        // .setPriority(Notification.PRIORITY_LOW)
+         return notification;    	
     }
     
     // last thing called after finish 
@@ -312,8 +329,10 @@ public class MainActivity extends Activity implements
             //oldActivity = ActivityRecognitionService.ACTIVITY;
             TextView tAccel = (TextView)findViewById(R.id.speed);
             tAccel.setText("0.00");
-           // TextView tActivity = (TextView)findViewById(R.id.activity);
-           // tActivity.setText("Unknown 0");
+            // TextView tActivity = (TextView)findViewById(R.id.activity);
+            // tActivity.setText("Unknown 0");
+            // getNotification is deprecated, but has to be used for compatibility with APIs lower than 16
+            notificationMgr.notify(notificationID, notification().getNotification());
     	} else {
     		stopTracking();
     	}
@@ -331,6 +350,7 @@ public class MainActivity extends Activity implements
 		locationClient.removeLocationUpdates(this);
 		//chart.clear();
 		doUnbindService();
+		notificationMgr.cancel(notificationID);
    		if(wifiConnected()){
    			sendCurrentData();
    		} else {
