@@ -85,9 +85,7 @@ public class MainActivity extends Activity implements
 	
 
 	private static final boolean DEBUG = false;
-	private static final boolean WARN = true;
 	private static final String LOC_SRV = "Location Services";
-	protected static final String prefix = "filtertest";
 	
 	private SensorManager sensorManager;
 	private Sensor accelerometer;
@@ -176,24 +174,19 @@ public class MainActivity extends Activity implements
         }
         
         serviceConnection = new ServiceConnection() {
-        	private ActivityRecognitionService boundActivityRecognitionService; // where is this actually supposed to be used?
+        	private ActivityRecognitionService boundActivityRecognitionService;
 			@Override
 			public void onServiceConnected(ComponentName name, IBinder service) {
 				boundActivityRecognitionService = ((ActivityRecognitionService.ActivityRecognitionBinder)service).getService();				
-				//For demo purposes
-				Toast.makeText(MainActivity.this, "Connected to activity recognition service", Toast.LENGTH_SHORT).show();			
 			}
 
 			@Override
 			public void onServiceDisconnected(ComponentName name) {
 				boundActivityRecognitionService = null;
-				Toast.makeText(MainActivity.this, "Disconnected from activity recognition service ", Toast.LENGTH_SHORT).show(); // Don't really see this pop up				
 			}      		
         };
         
-        // can go into one really. Fore registering the broadcast receiver.
-        IntentFilter i = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
-        registerReceiver(receiver,i);
+        registerReceiver(receiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
         
         //if there is no linear accelerometer present
         if(accelerometer == null){       	

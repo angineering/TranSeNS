@@ -7,7 +7,7 @@ public class NoiseFilter {
 	private static final float STILL_NOISE = (float) 0.1; 
 	private static final float TRESHOLD = (float)10; //allows 0 to 100 in 4 seconds
 	// Smoothing constant for low-pass filter. Smaller values mean more smoothing.
-	private static final float ALPHA = 1f;
+	private static final float ALPHA = 0.75f;
 	private static final float ALPHA_Z = 1f;
 
 	/**
@@ -21,7 +21,20 @@ public class NoiseFilter {
 	    output[0] = output[0] + ALPHA * (input[0] - output[0]);
 	    output[1] = output[1] + ALPHA * (input[1] - output[1]);
 	    output[2] = output[2] + ALPHA_Z * (input[2] - output[2]);
+	    
+	    for(int i=0; i<output.length; i++){
+	    	if(isStill(output[i])){
+	    		output[i] = 0;
+	    	}
+	    }
+	    
 	    return output;
 	}
-
+	
+	private boolean isStill(float output){
+		if(output < STILL_NOISE && output > -STILL_NOISE){
+			return true;
+		}
+		return false;
+	}
 }
