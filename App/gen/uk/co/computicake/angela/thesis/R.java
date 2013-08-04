@@ -176,6 +176,7 @@ containing a value of this type.
     }
     public static final class id {
         public static final int OnOff=0x7f050005;
+        public static final int about=0x7f05000d;
         public static final int activity=0x7f050009;
         public static final int chart=0x7f050008;
         public static final int help=0x7f05000c;

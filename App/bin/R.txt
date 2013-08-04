@@ -53,6 +53,7 @@ int drawable common_signin_btn_text_pressed_dark 0x7f020019
 int drawable common_signin_btn_text_pressed_light 0x7f02001a
 int drawable ic_launcher 0x7f02001b
 int id OnOff 0x7f050005
+int id about 0x7f05000d
 int id activity 0x7f050009
 int id chart 0x7f050008
 int id help 0x7f05000c
