@@ -9,4 +9,5 @@
 	    android:id="@+id/kill"
 	    android:title="@string/killApp" />
 	<item android:id="@+id/help" android:title="Help" android:visible="true"></item>
+	<item android:id="@+id/about" android:title="About"></item>
 </menu>

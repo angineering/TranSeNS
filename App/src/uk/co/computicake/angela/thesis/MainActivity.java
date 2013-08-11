@@ -195,6 +195,7 @@ public class MainActivity extends Activity implements
         }
         onFirstRun();
     }
+<<<<<<< HEAD
     
     /**
      * Checks if the app is running for the first time.
@@ -233,6 +234,10 @@ public class MainActivity extends Activity implements
 		
 	}
 	//mainly for debugging purposes
+=======
+
+	
+>>>>>>> 5495ae9cdf3ac1f09e09cc7701fb50a950f36c8c
     private void initialiseChart(){
     	chart  = new AccelerationTimeChart();
     	layout = (LinearLayout) findViewById(R.id.chart);
@@ -287,38 +292,56 @@ public class MainActivity extends Activity implements
         return true;
     }
     
+    /**
+     * Handles what happens when a menu item is selected.
+     */
     @Override
     public boolean onOptionsItemSelected(MenuItem item){
     	switch (item.getItemId()){
     	case R.id.kill:
     		finish();
+    		return true;
     	case R.id.help:
-    		showHelpDialog();
+    		String helpText = "Recording:\n Press 'Start Tracking' to start recording data. Press 'Stop Tracking' to stop recording. Make sure GPS and WiFi is enabled for best results.\n\n"+
+        			"Placement:\n Horizontal with the top of the phone facing in the direction of travel. The screen should be visible.\n\n"+
+        			"Axes:\n Axes are measured in the phone coordinate system as vectors. Z points out of the screen, Y out of the top and X out of the right side of your phone.\n\n"+
+        			"Graph:\n The graph displays acceleration as a function of data points. Blue is X, red is Y and white is Z.";
+    		showDialog(helpText);
+    		return true;
+    	case R.id.about:
+    		String aboutText = "This app was created by Angela Branaes as a bachelor project in part fulfillment of the"+
+					" requirements of the degree of Bachelor of Engineering at Imperial College London.";
+    		showDialog(aboutText);
+    		return true;
     	default:
     		return super.onOptionsItemSelected(item);
     	}
     }    
     
     /**
-     * Shows a help text in an alert box.
+     * Displays a string in an alert dialog.
+     * @param text
      */
-    public void showHelpDialog(){
-    	String help_text = "Recording:\n Press 'Start Tracking' to start recording data. Press 'Stop Tracking' to stop recording. Make sure GPS and WiFi is enabled for best results.\n\n"+
-    			"Placement:\n Horizontal with the top of the phone facing in the direction of travel. The screen should be visible.\n\n"+
-    			"Axes:\n Axes are measured in the phone coordinate system as vectors. Z points out of the screen, Y out of the top and X out of the right side of your phone.\n\n"+
-    			"Graph:\n The graph displays acceleration as a function of data points. Blue is X, red is Y and white is Z.";
+    private void showDialog(String text) {  	
     	AlertDialog.Builder builder = new AlertDialog.Builder(this);
-    	builder.setMessage(help_text)
+    	builder.setMessage(text)
     		.setNeutralButton("Close", new DialogInterface.OnClickListener(){
 				@Override
 				public void onClick(DialogInterface dialog, int which) {
 					dialog.dismiss();					
 				}
     		})
-    		.setTitle("Help");
+    		.setTitle("About");
     	builder.show();
-    }
+	}   
     
+<<<<<<< HEAD
+=======
+    /**
+     * Creates a notification to be displayed when the app is tracking.
+     * @return the notification to be displayed
+     */
+>>>>>>> 5495ae9cdf3ac1f09e09cc7701fb50a950f36c8c
 	public Notification.Builder notification(){
     	 Notification.Builder notification = new Notification.Builder(this)
          .setContentTitle("Recording trip")
@@ -334,6 +357,7 @@ public class MainActivity extends Activity implements
         locationClient.disconnect();
         sensorManager.unregisterListener(this);
         unregisterReceiver(receiver);
+		notificationMgr.cancel(notificationID);
         doUnbindService();
         android.os.Process.killProcess(android.os.Process.myPid()); // For DEVELOPMENT ONLY
     }   
@@ -357,8 +381,7 @@ public class MainActivity extends Activity implements
             //oldActivity = ActivityRecognitionService.ACTIVITY;
             TextView tAccel = (TextView)findViewById(R.id.speed);
             tAccel.setText("0.00");
-            // TextView tActivity = (TextView)findViewById(R.id.activity);
-            // tActivity.setText("Unknown 0");
+
             // getNotification is deprecated, but has to be used for compatibility with APIs lower than 16
             notificationMgr.notify(notificationID, notification().getNotification());
     	} else {
@@ -367,7 +390,9 @@ public class MainActivity extends Activity implements
     	
     }
     
-    // Stop tracking and prepare to send data on WiFi connect
+    /**
+     *  Stop tracking and send data if WiFi is connected.
+     */
     private void stopTracking(){
     	// Stop tracking and prepare to send data on WiFi connect
 		TextView t = (TextView)findViewById(R.id.speed);
@@ -400,8 +425,6 @@ public class MainActivity extends Activity implements
 		startService(i);
     }
     
-    // And for testing. try on SD card later in process, as files are likely to be huge. (NOTE: 10000 lines is 3 MB it seems)
-    // contemplate moving into separate thread.
     /**
      * Wrapper for storing recorded data
      */
@@ -411,7 +434,7 @@ public class MainActivity extends Activity implements
     }
     
     /**
-     * Checks if the phone is connected to the wifi.
+     * Checks if the phone is connected to the WiFi.
      * @return true if connected
      */
     public boolean wifiConnected(){
@@ -477,12 +500,6 @@ public class MainActivity extends Activity implements
 			y = accRes[1];
 			z = accRes[2];		
 		}/*
-		// we are standing still
-		/*
-		if(accel < NOISE){ 
-			tAccel.setText("0.00");			
-			return;
-		}*/
 		//shortAccel = d.format(accel);
 		/*
 		String xs = d.format(x);
@@ -493,7 +510,7 @@ public class MainActivity extends Activity implements
 		String shortY = d.format(y);
 		String shortX = d.format(x);
 		String shortZ = d.format(z);
-		tAccel.setText("x: "+shortX+" y:"+shortY+" z:"+shortZ);
+		tAccel.setText("x: "+shortX+" \ny: "+shortY+" \nz:" +shortZ);
 		//tAccel.setText(shortAccel);
 		if (DEBUG) Log.d(DEBUG_TAG, "Acceleration: "+ shortAccel);
 		
@@ -521,16 +538,6 @@ public class MainActivity extends Activity implements
     
 	// To test if the system waits for a void function or not:
 	private void record(String[] accel){
-		/*// Not interested in showing this anymore. Have confirmed that as long as phone is still in vehicle, it should generally show vehicle/still/unknown
-		DetectedActivity newActivity = ActivityRecognitionService.ACTIVITY;
-		if(!newActivity.equals(oldActivity)){
-			oldActivity = newActivity;
-			String activityName = Utils.getNameFromType(newActivity.getType());
-			int activityConfidence = newActivity.getConfidence();
-			TextView tActivity = (TextView)findViewById(R.id.activity);
-	        tActivity.setText(activityName + "  "+ activityConfidence);	
-		}
-		*/
 		String locationString = "";
 		if (location == null){
 			 //get latest known location useful when you need location quickly
