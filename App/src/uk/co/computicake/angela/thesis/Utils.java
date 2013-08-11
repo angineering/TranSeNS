@@ -14,7 +14,7 @@ public final class Utils {
 	protected static final int CONNECTION_FAILURE_RESOLUTION_REQUEST = 9000;
 	protected static final int CALIBRATION_INTERVAL = MINUTE*2;
 	protected static final int APRX_JSON_LENGTH = 134; // generally varies between 126 and 136, with the majority of values being 130+
-	protected static final String PREFIX = "norway";
+	protected static final String PREFIX = "london";
 	protected static final float NOISE = 0.1f;
 	
 	protected static final String FIND_FILE = "uk.co.computicake.angela.thesis.FIND_FILE";

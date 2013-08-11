@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+    <EditTextPreference 
+        android:key="username"
+        android:title="Username" android:defaultValue="app_user"/>
+    <EditTextPreference 
+        android:key="password"
+        android:title="Password"/>
+    <EditTextPreference 
+        android:key="server_url"
+        android:title="Server URL"
+        android:defaultValue="angela.computicake.co.uk"/>
+    <EditTextPreference 
+        android:key="port"
+        android:title="Port"
+        android:defaultValue="5984"/>
+</PreferenceScreen>

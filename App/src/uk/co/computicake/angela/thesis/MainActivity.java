@@ -30,6 +30,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.IBinder;
 import android.os.StrictMode;
+import android.preference.PreferenceFragment;
 import android.provider.Settings;
 import android.annotation.TargetApi;
 import android.app.Activity;
@@ -192,9 +193,45 @@ public class MainActivity extends Activity implements
         if(accelerometer == null){       	
         	missingSensorAlert().show();
         }
-        
+        onFirstRun();
     }
-
+    
+    /**
+     * Checks if the app is running for the first time.
+     */
+    private void onFirstRun(){
+    	boolean isFirstRun = getSharedPreferences("PREFERENCE", MODE_PRIVATE).getBoolean("isFirstRun", true);
+        if (isFirstRun){
+        	showFirstRunDialog();
+        	getSharedPreferences("PREFERENCE", MODE_PRIVATE)
+            	.edit()
+            	.putBoolean("isFirstRun", false)
+            	.commit();
+        }
+    }
+    
+	private void showFirstRunDialog() {
+		String alert_text = "Do you want to participate in the main data collection scheme?";
+    	AlertDialog.Builder builder = new AlertDialog.Builder(this);
+    	builder.setMessage(alert_text)
+    		// Proceed to main app view
+    		.setPositiveButton("Yes", new DialogInterface.OnClickListener(){
+    			@Override
+    			public void onClick(DialogInterface dialog, int which) {
+    				dialog.cancel();
+    				
+    			}   		
+    		})
+    		// Have user set user, password and database url for a CouchDB server
+    		.setNegativeButton("No", new DialogInterface.OnClickListener() {				
+    			@Override
+				public void onClick(DialogInterface dialog, int which) {
+    				openSettings();
+    			}
+			});
+    	builder.show();
+		
+	}
 	//mainly for debugging purposes
     private void initialiseChart(){
     	chart  = new AccelerationTimeChart();
@@ -282,7 +319,6 @@ public class MainActivity extends Activity implements
     	builder.show();
     }
     
- 
 	public Notification.Builder notification(){
     	 Notification.Builder notification = new Notification.Builder(this)
          .setContentTitle("Recording trip")
@@ -301,8 +337,7 @@ public class MainActivity extends Activity implements
         doUnbindService();
         android.os.Process.killProcess(android.os.Process.myPid()); // For DEVELOPMENT ONLY
     }   
-    
-    
+     
     /**
      * Tracks data on active, sends or stores data when turned off
      * @param view
@@ -548,21 +583,21 @@ public class MainActivity extends Activity implements
 			isBound = false;
 		}	
 	}
-	/*
-	void normalisePhonePosition(float[] rotationValues){
-		rotationVals = rotationValues;
-		float[] R = new float[9];
-		//float[] newR = new float[9];
-		float[] orientation = new float[3];
-		SensorManager.getRotationMatrixFromVector(R, rotationValues);
-		SensorManager.getOrientation(R, orientation);
-		
-		azimuth = (float) Math.toDegrees(orientation[0]); // used to update compass bearing
-		azimuth = azimuth >= 0 ? azimuth : azimuth + 360; // to use [0,360] instead of [-180, 180]
-		pitch = (float) Math.toDegrees(orientation[1]);
-		roll = (float) Math.toDegrees(orientation[2]);
-		Log.i("normalise", "azi:"+azimuth+" pitch:"+pitch+" roll:"+roll);
-		
-	}*/
 
+	public static class SettingsFragment extends PreferenceFragment {
+		@Override
+		public void onCreate(Bundle savedInstanceState){
+			super.onCreate(savedInstanceState);
+			
+			addPreferencesFromResource(R.xml.preferences);
+		}
+	}
+	
+	protected void openSettings(){
+		// Display the fragment as the main content.
+        getFragmentManager().beginTransaction()
+                .replace(android.R.id.content, new SettingsFragment())
+                .commit();
+	}
+	
 }
