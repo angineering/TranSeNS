@@ -52,39 +52,23 @@ int drawable common_signin_btn_text_normal_light 0x7f020018
 int drawable common_signin_btn_text_pressed_dark 0x7f020019
 int drawable common_signin_btn_text_pressed_light 0x7f02001a
 int drawable ic_launcher 0x7f02001b
-<<<<<<< HEAD
 int id OnOff 0x7f060005
+int id about 0x7f06000d
 int id activity 0x7f060009
 int id chart 0x7f060008
 int id help 0x7f06000c
 int id hybrid 0x7f060004
 int id kill 0x7f06000b
-int id menu_settings 0x7f06000a
 int id none 0x7f060000
 int id normal 0x7f060001
 int id satellite 0x7f060002
+int id settings 0x7f06000a
 int id speed 0x7f060007
 int id terrain 0x7f060003
 int id textView1 0x7f060006
-=======
-int id OnOff 0x7f050005
-int id about 0x7f05000d
-int id activity 0x7f050009
-int id chart 0x7f050008
-int id help 0x7f05000c
-int id hybrid 0x7f050004
-int id kill 0x7f05000b
-int id menu_settings 0x7f05000a
-int id none 0x7f050000
-int id normal 0x7f050001
-int id satellite 0x7f050002
-int id speed 0x7f050007
-int id terrain 0x7f050003
-int id textView1 0x7f050006
->>>>>>> 5495ae9cdf3ac1f09e09cc7701fb50a950f36c8c
 int layout activity_main 0x7f030000
 int menu activity_main 0x7f090000
-int string OnOff 0x7f070018
+int string OnOff 0x7f070017
 int string app_name 0x7f070015
 int string auth_client_availability_notification_title 0x7f07000f
 int string auth_client_play_services_err_notification_msg 0x7f070010
@@ -104,12 +88,12 @@ int string common_google_play_services_update_text 0x7f070008
 int string common_google_play_services_update_title 0x7f070007
 int string common_signin_button_text 0x7f07000d
 int string common_signin_button_text_long 0x7f07000e
-int string hello_world 0x7f070016
-int string killApp 0x7f070019
+int string helpText 0x7f070019
+int string killApp 0x7f070018
 int string location_client_ulr_inactive_age_under_13 0x7f070012
 int string location_client_ulr_inactive_age_unknown 0x7f070013
 int string location_client_ulr_inactive_unknown_restriction 0x7f070014
-int string menu_settings 0x7f070017
+int string menu_settings 0x7f070016
 int style AppBaseTheme 0x7f080000
 int style AppTheme 0x7f080001
 int[] styleable MapAttrs { 0x7f010000, 0x7f010001, 0x7f010002, 0x7f010003, 0x7f010004, 0x7f010005, 0x7f010006, 0x7f010007, 0x7f010008, 0x7f010009, 0x7f01000a, 0x7f01000b, 0x7f01000c, 0x7f01000d }

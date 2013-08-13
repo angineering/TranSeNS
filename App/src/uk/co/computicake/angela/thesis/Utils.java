@@ -6,7 +6,7 @@ public final class Utils {
 	
 	protected static final boolean DEVELOPER_MODE = false;
 
-	protected final static String TAG = "thesis"; // app name
+	protected final static String TAG = "transens"; // app name
 	
 	protected static final int SECOND = 1000;
 	protected static final int MINUTE = SECOND*60;

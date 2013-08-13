@@ -60,6 +60,10 @@
         <service android:name="uk.co.computicake.angela.thesis.RecordDataIntentService" />
         <service android:name="uk.co.computicake.angela.thesis.FileFinderIntentService" />
         <service android:name="uk.co.computicake.angela.thesis.StoreIntentService" />
+        <activity
+            android:name=".SettingsActivity"
+            android:label="Settings">
+        </activity>
     </application>
 	
     

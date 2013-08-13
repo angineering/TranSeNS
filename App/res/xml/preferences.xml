@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+    <PreferenceCategory
+        android:title="CouchDB server settings">
     <EditTextPreference 
         android:key="username"
         android:title="Username" android:defaultValue="app_user"/>
@@ -7,11 +9,16 @@
         android:key="password"
         android:title="Password"/>
     <EditTextPreference 
-        android:key="server_url"
+        android:key="domain"
         android:title="Server URL"
         android:defaultValue="angela.computicake.co.uk"/>
     <EditTextPreference 
         android:key="port"
         android:title="Port"
         android:defaultValue="5984"/>
+    <EditTextPreference
+        android:key="prefix"
+        android:title="File Prefix"
+        android:defaultValue="london"/>
+    </PreferenceCategory>
 </PreferenceScreen>

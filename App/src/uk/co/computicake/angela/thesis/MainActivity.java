@@ -22,6 +22,7 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.location.Location;
+import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
@@ -31,6 +32,7 @@ import android.os.Environment;
 import android.os.IBinder;
 import android.os.StrictMode;
 import android.preference.PreferenceFragment;
+import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.annotation.TargetApi;
 import android.app.Activity;
@@ -47,6 +49,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.text.format.DateUtils;
 import android.util.Log;
 import android.view.Menu;
@@ -97,6 +100,7 @@ public class MainActivity extends Activity implements
 	protected LocationClient locationClient;
 	protected Location location;
 	private LocationRequest locationRequest;
+	LocationManager locationManager;
 	private NoiseFilter noiseFilter;
 	protected static LinkedBuffer<String> data;
 	private float[] accelVals; // to hold smoothed acceleration values
@@ -141,6 +145,7 @@ public class MainActivity extends Activity implements
         rotationVector = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
         connMgr  = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         notificationMgr =  (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        locationManager = (LocationManager) getSystemService( Context.LOCATION_SERVICE );
         noiseFilter = new NoiseFilter();
         locationClient = new LocationClient(this, this, this);
 		locationClient.connect();
@@ -195,7 +200,6 @@ public class MainActivity extends Activity implements
         }
         onFirstRun();
     }
-<<<<<<< HEAD
     
     /**
      * Checks if the app is running for the first time.
@@ -211,6 +215,9 @@ public class MainActivity extends Activity implements
         }
     }
     
+    /**
+     * Displayed on first run. Allows the user to set their own server to send the data to.
+     */
 	private void showFirstRunDialog() {
 		String alert_text = "Do you want to participate in the main data collection scheme?";
     	AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -227,17 +234,12 @@ public class MainActivity extends Activity implements
     		.setNegativeButton("No", new DialogInterface.OnClickListener() {				
     			@Override
 				public void onClick(DialogInterface dialog, int which) {
-    				openSettings();
+    				showSettings();
     			}
 			});
-    	builder.show();
-		
+    	builder.show();		
 	}
 	//mainly for debugging purposes
-=======
-
-	
->>>>>>> 5495ae9cdf3ac1f09e09cc7701fb50a950f36c8c
     private void initialiseChart(){
     	chart  = new AccelerationTimeChart();
     	layout = (LinearLayout) findViewById(R.id.chart);
@@ -266,7 +268,7 @@ public class MainActivity extends Activity implements
      * Shows an alert if GPS is disabled. 
      */
     public void showSettingsAlert(){
-    	String alert_text = "GPS is not enabled. Please enable GPS now.";
+    	String alert_text = "GPS is not enabled. Please enable GPS now for more accurate results.";
     	AlertDialog.Builder builder = new AlertDialog.Builder(this);
     	builder.setMessage(alert_text)
     		.setPositiveButton("Settings", new DialogInterface.OnClickListener(){
@@ -313,6 +315,9 @@ public class MainActivity extends Activity implements
 					" requirements of the degree of Bachelor of Engineering at Imperial College London.";
     		showDialog(aboutText);
     		return true;
+    	case R.id.settings:
+    		showSettings();
+    		return true;
     	default:
     		return super.onOptionsItemSelected(item);
     	}
@@ -335,13 +340,10 @@ public class MainActivity extends Activity implements
     	builder.show();
 	}   
     
-<<<<<<< HEAD
-=======
     /**
      * Creates a notification to be displayed when the app is tracking.
      * @return the notification to be displayed
      */
->>>>>>> 5495ae9cdf3ac1f09e09cc7701fb50a950f36c8c
 	public Notification.Builder notification(){
     	 Notification.Builder notification = new Notification.Builder(this)
          .setContentTitle("Recording trip")
@@ -367,16 +369,19 @@ public class MainActivity extends Activity implements
      * @param view
      */
     public void onToggleActive(View view){
-    	//String[] fileTuple = findFile();
     	final String DEBUG_TAG = "Toggle Active";    	
     	boolean on = ((ToggleButton) view).isChecked();
     	if(DEBUG) Log.d(DEBUG_TAG, ""+ on);
     	if(on){
+    		if (!locationManager.isProviderEnabled( LocationManager.GPS_PROVIDER)) {
+    			showSettingsAlert();
+    			((ToggleButton) view).setChecked(false);
+    			return;
+    		}
     		data = new LinkedBuffer<String>();
     		//request updates and start tracking
     		locationClient.requestLocationUpdates(locationRequest, this);
             sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
-            //sensorManager.registerListener(this, rotationVector, 1000000);
             doBindService();
             //oldActivity = ActivityRecognitionService.ACTIVITY;
             TextView tAccel = (TextView)findViewById(R.id.speed);
@@ -590,21 +595,9 @@ public class MainActivity extends Activity implements
 			isBound = false;
 		}	
 	}
-
-	public static class SettingsFragment extends PreferenceFragment {
-		@Override
-		public void onCreate(Bundle savedInstanceState){
-			super.onCreate(savedInstanceState);
-			
-			addPreferencesFromResource(R.xml.preferences);
-		}
-	}
 	
-	protected void openSettings(){
-		// Display the fragment as the main content.
-        getFragmentManager().beginTransaction()
-                .replace(android.R.id.content, new SettingsFragment())
-                .commit();
+	void showSettings(){
+		Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
+		startActivityForResult(intent, 0);
 	}
-	
 }

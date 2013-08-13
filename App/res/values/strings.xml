@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="app_name">Thesis</string>
-    <string name="hello_world">Hello world!</string>
+    <string name="app_name">TranSeNS</string>
     <string name="menu_settings">Settings</string>
     <string name="OnOff">Track</string>
     <string name="killApp">Kill App</string>
+    <string name="helpText">"Recording:\n Press 'Start Tracking' to start recording data. Press 'Stop Tracking' to stop recording. Make sure GPS and WiFi is enabled for best results.\n\n"+
+        			"Placement:\n Horizontal with the top of the phone facing in the direction of travel. The screen should be visible.\n\n"+
+        			"Axes:\n Axes are measured in the phone coordinate system as vectors. Z points out of the screen, Y out of the top and X out of the right side of your phone.\n\n"+
+        			"Graph:\n The graph displays acceleration as a function of data points. Blue is X, red is Y and white is Z." </string>
 
 </resources>
