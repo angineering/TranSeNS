@@ -4,13 +4,15 @@ TranSeNS - The Transport Network Sensor System
 This is a Bachelor thesis project done in conjunction with Imperial College London in part 
 fulfillment of the degree of Bachelor of Engineering. 
 
-App - The code for the Android app
-web - The code for the web front-end and data processing
+
+- App - The code for the Android app
+- web - The code for the web front-end and data processing
 
 
 %%%%%%%%
 Web Note
 %%%%%%%%
+
 To make the website work a few steps need to be taken:
 - The Google Maps API key in maps.html needs to be changed to your own. The present code is only valid for running
 the webpage on http://angela.computicake.co.uk/projects/maps/map.html.
