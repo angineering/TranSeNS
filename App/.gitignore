@@ -7,7 +7,7 @@ bin/
 *.swp
 *~.nib
 local.properties
-.classpath
+*.class
 
 # Locally stored "Eclipse launch configurations"
 *.launch
