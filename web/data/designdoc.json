@@ -1,0 +1,45 @@
+{
+  "_id":"_design/views",
+  "language":"javascript",
+  "views": {
+    "locs": {
+      "map": "function(doc) {\n  emit(doc.location, doc.time);\n}",
+      "reduce": "function(key, values){\n  return values[0];\n}"
+    },
+    "acc": {
+      "map": "function(doc) {\n  var time = Math.floor(parseInt(doc.time)/1000)*1000;;\n  emit(time, doc.speed);\n}",
+      "reduce": "function(key, vals){\n  var avg = sum(vals)/vals.length;\n  return avg;\n\n}"
+    },
+    "xyz":{
+      "map": "function(doc){\n var time = Math.floor(parseInt(doc.time)/1000)*1000;\n var xyz = [doc.x, doc.y, doc.z];\n emit(time, xyz);\n}",
+      "reduce": "function(key, vals){\n   var x = 0; var y = 0; var z = 0; for(var i = 0; i < vals.length; i++) { x += vals[i][0]; y += vals[i][1]; z += vals[i][2]; }  x = x/vals.length;  y = y/vals.length;  z = z/vals.length; \n return [x,y,z];}" 
+	},
+	"xyzAll":{
+      "map": "function(doc){\n var xyz = [doc.x, doc.y, doc.z];\n emit(doc.time, xyz);\n}",
+      "reduce": "function(key, vals){\n   var x = 0; var y = 0; var z = 0; for(var i = 0; i < vals.length; i++) { x += vals[i][0]; y += vals[i][1]; z += vals[i][2]; }  x = x/vals.length;  y = y/vals.length;  z = z/vals.length; \n return [x,y,z];}" 
+	},
+	"y":{
+      "map": "function(doc){\n var time = Math.floor(parseInt(doc.time)/1000)*1000;\n var y = [doc.y, doc.location];\n emit(time, y);\n}",
+      "reduce": "function(key, vals){\n  var y = 0; for(var i = 0; i < vals.length; i++) { y += vals[i][0]; }  y = y/vals.length; var loc = vals[0][1]; \n return [y, loc];}" 
+	},"xyz05":{
+      "map": "function(doc){\n var time = Math.floor(parseInt(doc.time)/500)*500;\n var xyz = [doc.x, doc.y, doc.z];\n emit(time, xyz);\n}",
+      "reduce": "function(key, vals){\n   var x = 0; var y = 0; var z = 0; for(var i = 0; i < vals.length; i++) { x += vals[i][0]; y += vals[i][1]; z += vals[i][2]; }  x = x/vals.length;  y = y/vals.length;  z = z/vals.length; \n return [x,y,z];}" 
+	},
+	"xyz25":{
+      "map": "function(doc){\n var time = Math.floor(parseInt(doc.time)/250)*250;\n var xyz = [doc.x, doc.y, doc.z];\n emit(time, xyz);\n}",
+      "reduce": "function(key, vals){\n   var x = 0; var y = 0; var z = 0; for(var i = 0; i < vals.length; i++) { x += vals[i][0]; y += vals[i][1]; z += vals[i][2]; }  x = x/vals.length;  y = y/vals.length;  z = z/vals.length; \n return [x,y,z];}" 
+	},
+	"xyz75":{
+      "map": "function(doc){\n var time = Math.floor(parseInt(doc.time)/750)*750;\n var xyz = [doc.x, doc.y, doc.z];\n emit(time, xyz);\n}",
+      "reduce": "function(key, vals){\n   var x = 0; var y = 0; var z = 0; for(var i = 0; i < vals.length; i++) { x += vals[i][0]; y += vals[i][1]; z += vals[i][2]; }  x = x/vals.length;  y = y/vals.length;  z = z/vals.length; \n return [x,y,z];}" 
+	},
+	"z":{
+      "map": "function(doc){\n var time = Math.floor(parseInt(doc.time)/250)*250;\n var z = [doc.z, doc.location];\n emit(time, z);\n}",
+      "reduce": "function(key, vals){\n  var z = 0; for(var i = 0; i < vals.length; i++) { z += vals[i][0]; }  z = z/vals.length; var loc = vals[0][1]; \n return [z, loc];}" 
+	},
+  },
+  "lists": {
+     "csv_coord": "function(head, req) {var row; var rows = []; start({ 'headers': { 'Content-Type': 'text/html'}}); while(row = getRow()) { rows.push(row);} rows.sort(function(a,b){return b.value-a.value;}); for(i=0; i<rows.length; i++){ send(rows[i].key.toString() + '\\n');}}",
+     "csv_acc": "function(head, req) {var row; var rows = []; start({ 'headers': { 'Content-Type': 'text/html'}}); while(row = getRow()) { rows.push(row);} for(i=0; i<rows.length; i++){ send(rows[i].key.toString() +', '+ rows[i].value.toString()+ '\\n');}}"
+  }
+}

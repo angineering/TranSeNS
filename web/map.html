@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <link rel="stylesheet" href="layout.css" type="text/css" />
+    <script type="text/javascript" src="http://code.jquery.com/jquery-latest.min.js"></script>
+		<script type="text/javascript"
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBqZuhQIB4_ANNbQ0kn0nf4xXI5fjtCEuw&sensor=false&libraries=visualization">
+    </script>
+		<link rel="stylesheet" type="text/css" href="../libs/bootstrap/css/bootstrap.min.css"/>
+		<script type="text/javascript" src="map.js"></script>
+    <script type="text/javascript">
+     google.maps.event.addDomListener(window, 'load', init);
+    </script>
+  </head>
+  <body>
+		<div id="wrapper" style="position:relative">
+		<div id="map-canvas" class="google-maps"></div>
+	<div class="infobox"> 
+		<h2>TranSeNS</h2>
+		The Transport Sensor Network System showing driving conditions in London. </br></br></br>
+			<button class="btn btn-danger" type="button" onclick="toggleBumps();">
+			Road Quality</button>
+			</br></br>
+			<button class="btn btn-danger" type="button" onclick="toggleStops();">
+			Driving Comfort</button>
+		  </br></br></br></br>
+			<div id="legend">
+				<h4>Legend</h4>
+				Colour intensity is calculated as the sum of bump or stop severity and frequency. The larger the bump or the more abrupt the stop, the higher the value assigned to it. Red signifies the greates problem areas, green minor problems. 
+			</div>
+			</br><p>
+			<a href="JavaScript:showAbout()">About</a> |
+		  <a href="mailto:angela.branaes@gmail.com">Contact me</a> |
+		  <a href="http://angineering.wordpress.com">Blog</a> </br>
+			<a href="https://github.com/angineering">Follow me on github</a>
+			</br></br>
+			
+			<div id="copyright">
+				data &#169 Angela Branaes | Maps by Google 
+			</div>
+		</div>
+		<div id="about" class="infobox popup" style="display:none">
+			<h3>About</h3>
+			TranSeNS is a bachelor thesis project done in conjunction with Imperial College London in part fulfilment of the requirements of the degree of Bachelor of Engineering.
+		<p><p>
+			All data is gathered using the TranSeNS Android app built specifically for this project. 
+</br></div>
+		</div>
+	 </body>
+</html>

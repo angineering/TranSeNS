@@ -1,0 +1,46 @@
+a {
+	color: white;
+	font-size: 11px;
+}
+a:visited {
+	color:white;
+}
+
+*{
+	font-family: Helvetica, Arial, Verdana, sans-serif;
+}
+
+#map-canvas {
+	height:1080px;
+	position:relative;
+}
+
+#copyright {
+	font-size: 9px;
+}
+
+.infobox.popup{
+	width: 300px;
+	top: 20%;
+	left: 40%;
+}
+
+.infobox{
+  right: 0px;
+	top: 100px;
+	z-index:99;
+	position: absolute;
+	background-color: rgba(0,0,0,0.8);
+	text-align: center;
+	color: white;
+	border-radius: 20px;
+	padding: 30px;
+	margin: 20px;
+	width: 200px;
+}
+
+#legend{
+	display:block;
+}
+
+
