@@ -430,18 +430,14 @@ public class MainActivity extends Activity implements
 		// We don't care about super-precision as there is a lot of noise
 		DecimalFormat d = new DecimalFormat("#.##");
 		String shortAccel;
-		
-		float x = event.values[0];
-		float y = event.values[1];
-		float z = event.values[2];
 
 		accelVals = noiseFilter.lowPass(event.values.clone(), accelVals);
 		TextView tAccel = (TextView)findViewById(R.id.speed);
 		
 		// filtered acceleration values
-		x = accelVals[0];
-		y = accelVals[1];
-		z = accelVals[2];
+		float x = accelVals[0];
+		float y = accelVals[1];
+		float z = accelVals[2];
 		
 		String shortY = d.format(y);
 		String shortX = d.format(x);
