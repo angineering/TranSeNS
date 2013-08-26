@@ -2,7 +2,6 @@
 library("rjson", lib.loc="R-packages")
 
 y <- read.csv("stopdata.csv", header=FALSE)
-#summary(y)
 i = 1
 counter = 1
 sum = 0

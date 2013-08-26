@@ -10,8 +10,7 @@ while(i < length(acc)){
   delta = acc[i] - acc[i-1]
   if(delta >=1.5){
     count = count + 1
-    i = i + 2
-    # could append to file as you go along, but given speed of IO this seems stupid. 
+    i = i + 2 
     bump <- list(time=z[,1][i], weight=delta, lat=z[,3][i], lon=z[,4][i])
     write.table(bump, "bumpdata.csv", append=TRUE, sep=",", row.names=FALSE, col.names=FALSE)
   } else {

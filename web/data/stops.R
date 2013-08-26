@@ -19,6 +19,7 @@ lt6sec<-function(j,i){
 	return(FALSE)
 }
 
+# Increments i by 3 seconds
 inc3sec<-function(i){
   t1 = y[,1][i]
 	inc = i+3
