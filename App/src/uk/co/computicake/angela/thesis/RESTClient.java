@@ -1,4 +1,3 @@
-//TODO ssl encryption!
 package uk.co.computicake.angela.thesis;
 
 import org.apache.http.conn.scheme.Scheme;
@@ -11,26 +10,30 @@ import org.restlet.data.ChallengeScheme;
 import org.restlet.data.MediaType;
 import org.restlet.data.Status;
 import org.restlet.engine.Engine;
-//import org.restlet.ext.net.HttpClientHelper;
 import org.restlet.representation.StringRepresentation;
 import org.restlet.resource.ClientResource;
 
+import uk.co.computicake.angela.thesis.SettingsActivity.SettingsFragment;
+
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.preference.Preference;
+import android.preference.PreferenceManager;
 import android.util.Log;
 
 /**
  * Class handling connection to a central db and uploading of data.
  */
-public class RESTClient {
+public class RestClient {
 	
-	// GUEST permissions, not admin. only for uploading and not for reading data.
-	private static String username = "app_user"; 
-    private static String password = "Android0.1"; 
-    //private static String domain = "angela.computicake.co.uk";  
-    private static final String URL = "http://app_user:Android0.1@angela.computicake.co.uk:5986/"; // http://username:password@ip:port
+	private static String username; 
+    private static String password; 
+    private static String URL; // http://username:password@ip:port/
     private static ClientResource resource;
     
     
-    public RESTClient(){
+    public RestClient(){
+    	fetchPreferences();
     	resource = new ClientResource(URL);
     	resource.getReference().setBaseRef(URL);  	
     	ChallengeResponse authentication = new ChallengeResponse(
@@ -43,13 +46,23 @@ public class RESTClient {
        
     }
     
+    private void fetchPreferences(){
+    	SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(Utils.CONTEXT);
+    	username = preferences.getString("username", "app_user");
+    	password = preferences.getString("password", "Android0.1");
+    	String port = preferences.getString("port", "5986");
+    	String domain = preferences.getString("domain", "angela.computicake.co.uk");
+    	URL = "http://"+username+":"+password+"@"+domain+":"+port+"/";
+    	
+    }
+    
     /**
-     * Pings the db instance. Return the response text from the server
+     * Pings the db instance. Returns true if ping is successful.
+     * Displays status text in log.
      *
-     * @return 
+     * @return true on success
      * @throws Exception
      */
-   // @Get()
     public boolean checkServer() throws Exception {
         boolean success;
         resource.get();
@@ -59,10 +72,9 @@ public class RESTClient {
             success = true;
         } else if (resource.getStatus()  
                 .equals(Status.CLIENT_ERROR_UNAUTHORIZED)) {   
-            Log.w("ping server", "Access denied. Check credentials"); // not technically needed, as we don't change these
+            Log.w("ping server", "Access denied. Check credentials");
             success = false;
-        } else {  
-            // Unexpected status  
+        } else {   
             Log.w("ping server","An unexpected status was returned: "  
                     + resource.getStatus());  
             success = false;
@@ -74,8 +86,8 @@ public class RESTClient {
      * Creates a db . Returns the response text from the server.
      * Each trip corresponds to a db.
      *
-     * @param db the name of the database to create
-     * @return
+     * @param db The name of the database to create.
+     * @return String with response text from server.
      * @throws Exception
      */
     public String createDB(String db) throws Exception {
@@ -91,15 +103,14 @@ public class RESTClient {
     }
     
     /**
-     * Add a single document to couchdb.
+     * Add a single document to the db.
      *
-     * @param db the database name to add the document to
-     * @param json the json data providing the document to add
-     * @param id the unique identifier for the document
-     * @return
+     * @param db The database name to add the document to.
+     * @param json The JSON data providing the document to add.
+     * @param id The unique identifier for the document.
+     * @return String with the server response.
      * @throws Exception
      */
-  //  @Post()
     public String addDocument(String db, String json, String id) throws Exception {
         String response;
         StringRepresentation sr = new StringRepresentation(json, MediaType.APPLICATION_JSON);      
@@ -114,12 +125,11 @@ public class RESTClient {
     /**
      * Bulk add documents, supplying your own unique ids.
      *
-     * @param db the database to add the documents to
-     * @param json the json data containing documents, each with associated id
-     * @return
+     * @param db The database name to add the document to.
+     * @param json The JSON data containing documents, each with associated id
+     * @return true on success.
      * @throws Exception
      */
- //   @Post()
     public boolean addDocuments(String db, String file) throws Exception {
         String response;
         resource.getReference().setLastSegment(db+"/_bulk_docs");

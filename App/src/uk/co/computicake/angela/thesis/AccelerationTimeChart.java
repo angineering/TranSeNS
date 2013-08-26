@@ -49,7 +49,6 @@ public class AccelerationTimeChart {
 		mRenderer.setYTitle("m/s^2");
 		x_pos = 0;
 		
-		// allows for the entire graph to be customised
 		mRenderer.addSeriesRenderer(rendererx);
 		mRenderer.addSeriesRenderer(renderery);
 		mRenderer.addSeriesRenderer(rendererz);
@@ -96,10 +95,4 @@ public class AccelerationTimeChart {
 			mRenderer.setXAxisMin(++x_pos);
 		}
 	}
-	/*
-	public void clear(){
-		dataset = new TimeSeries("Acceleration");
-		mDataset = new XYMultipleSeriesDataset();
-		mDataset.addSeries(dataset);
-	}*/
 }

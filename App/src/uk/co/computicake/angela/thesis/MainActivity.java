@@ -1,22 +1,7 @@
 package uk.co.computicake.angela.thesis;
 
-// TODO add checks for checking that google play services is available
-// TODO have icon on status bar when running (since is supposed to be a background program really)
-
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
 import java.util.concurrent.ExecutionException;
-
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -25,8 +10,6 @@ import android.location.Location;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.IBinder;
@@ -93,7 +76,6 @@ public class MainActivity extends Activity implements
 	
 	private SensorManager sensorManager;
 	private Sensor accelerometer;
-	private Sensor rotationVector;
 	private NotificationManager notificationMgr;
 	private ConnectivityManager connMgr;
 	private BroadcastReceiver receiver;
@@ -108,12 +90,6 @@ public class MainActivity extends Activity implements
 	private ServiceConnection serviceConnection;
 	private boolean isBound = false;
 	private int notificationID = 1;
-	
-	// IN RADIANS! Positive in the counter-clockwise direction
-	protected float azimuth = 0; // rotation around z.  the angle between magnetic north and the device's y axis. 0 for north, 180 for south. 90 for east. 
-	protected float pitch = 0; // rotation around x. positive when the positive z axis rotates toward the positive y axis. +-180. 
-	protected float roll = 0;  // rotation y. positive when the positive z axis rotates toward the positive x axis. +-90. Increases clockwise.
-	protected float[] rotationVals;
 	
 	// Graph
 	private LinearLayout layout;
@@ -142,7 +118,6 @@ public class MainActivity extends Activity implements
         setContentView(R.layout.activity_main);
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
-        rotationVector = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
         connMgr  = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         notificationMgr =  (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         locationManager = (LocationManager) getSystemService( Context.LOCATION_SERVICE );
@@ -151,17 +126,11 @@ public class MainActivity extends Activity implements
 		locationClient.connect();
 	
         initialiseChart();
-      		
-   		//Create location request
+
       	locationRequest = LocationRequest.create()
       		.setInterval(10000).setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-               
-      	//locationUpdatesRequested = false;
-      	
-        //Handles connectivity status notifications.
-        // receiver = new ConnectivityReceiver();
-        // registerReceiver(receiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION)); //without this is only picks up wifi state changed
-
+        Utils.CONTEXT = this;
+        
         receiver = new BroadcastReceiver(){
 			@Override
 			public void onReceive(Context context, Intent intent) {				
@@ -194,7 +163,7 @@ public class MainActivity extends Activity implements
         
         registerReceiver(receiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
         
-        //if there is no linear accelerometer present
+        //if there is no linear accelerometer present show alert
         if(accelerometer == null){       	
         	missingSensorAlert().show();
         }
@@ -205,10 +174,10 @@ public class MainActivity extends Activity implements
      * Checks if the app is running for the first time.
      */
     private void onFirstRun(){
-    	boolean isFirstRun = getSharedPreferences("PREFERENCE", MODE_PRIVATE).getBoolean("isFirstRun", true);
+    	boolean isFirstRun = getPreferences(MODE_PRIVATE).getBoolean("isFirstRun", true);
         if (isFirstRun){
         	showFirstRunDialog();
-        	getSharedPreferences("PREFERENCE", MODE_PRIVATE)
+        	getPreferences(MODE_PRIVATE)
             	.edit()
             	.putBoolean("isFirstRun", false)
             	.commit();
@@ -230,7 +199,7 @@ public class MainActivity extends Activity implements
     				
     			}   		
     		})
-    		// Have user set user, password and database url for a CouchDB server
+    		// Have user set user, password and database URL for a CouchDB server
     		.setNegativeButton("No", new DialogInterface.OnClickListener() {				
     			@Override
 				public void onClick(DialogInterface dialog, int which) {
@@ -239,7 +208,7 @@ public class MainActivity extends Activity implements
 			});
     	builder.show();		
 	}
-	//mainly for debugging purposes
+	
     private void initialiseChart(){
     	chart  = new AccelerationTimeChart();
     	layout = (LinearLayout) findViewById(R.id.chart);
@@ -349,7 +318,6 @@ public class MainActivity extends Activity implements
          .setContentTitle("Recording trip")
          .setContentText("Please stop tracking before moving the phone.")
          .setSmallIcon(R.drawable.app_icon_notification);
-        // .setPriority(Notification.PRIORITY_LOW)
          return notification;    	
     }
     
@@ -361,7 +329,7 @@ public class MainActivity extends Activity implements
         unregisterReceiver(receiver);
 		notificationMgr.cancel(notificationID);
         doUnbindService();
-        android.os.Process.killProcess(android.os.Process.myPid()); // For DEVELOPMENT ONLY
+        if(Utils.DEVELOPER_MODE) android.os.Process.killProcess(android.os.Process.myPid()); // For DEVELOPMENT ONLY
     }   
      
     /**
@@ -373,6 +341,7 @@ public class MainActivity extends Activity implements
     	boolean on = ((ToggleButton) view).isChecked();
     	if(DEBUG) Log.d(DEBUG_TAG, ""+ on);
     	if(on){
+    		// checks if GPS is enabled
     		if (!locationManager.isProviderEnabled( LocationManager.GPS_PROVIDER)) {
     			showSettingsAlert();
     			((ToggleButton) view).setChecked(false);
@@ -387,7 +356,7 @@ public class MainActivity extends Activity implements
             TextView tAccel = (TextView)findViewById(R.id.speed);
             tAccel.setText("0.00");
 
-            // getNotification is deprecated, but has to be used for compatibility with APIs lower than 16
+            // Note: getNotification is deprecated, but has to be used for compatibility with APIs lower than 16
             notificationMgr.notify(notificationID, notification().getNotification());
     	} else {
     		stopTracking();
@@ -406,7 +375,6 @@ public class MainActivity extends Activity implements
         tActivity.setText("");
 		sensorManager.unregisterListener(this);
 		locationClient.removeLocationUpdates(this);
-		//chart.clear();
 		doUnbindService();
 		notificationMgr.cancel(notificationID);
    		if(wifiConnected()){
@@ -450,10 +418,8 @@ public class MainActivity extends Activity implements
     	return isWifiConn;
     }
     
-    // this just tells us which sensor changed
 	@Override
 	public void onAccuracyChanged(Sensor sensor, int accuracy) {
-		// TODO Auto-generated method stub		
 	}
 
 	@Override
@@ -461,7 +427,7 @@ public class MainActivity extends Activity implements
 		final String DEBUG_TAG = "Sensor Changed";
 		if (DEBUG) Log.d(DEBUG_TAG, "Sensor change registered.");
 
-		// We don't care about super-precision, as there is a lot of noise
+		// We don't care about super-precision as there is a lot of noise
 		DecimalFormat d = new DecimalFormat("#.##");
 		String shortAccel;
 		
@@ -477,46 +443,10 @@ public class MainActivity extends Activity implements
 		y = accelVals[1];
 		z = accelVals[2];
 		
-		/*
-		float[] accV = {x, y, z, 0}; 
-		float[] R = new float[16];
-		float[] I = new float[16];
-		float[] Rinv = new float[16];
-		float[] accRes = new float[4];
-		
-		if(gravity != null && geomagnetic != null){
-			SensorManager.getRotationMatrix(R, I, gravity, geomagnetic);
-			android.opengl.Matrix.invertM(Rinv, 0, R, 0);
-			android.opengl.Matrix.multiplyMV(accRes, 0, Rinv, 0, accV, 0);
-			
-			x = accRes[0];
-			y = accRes[1];
-			z = accRes[2];	
-		}
-		*/
-		/*
-		// this is odd. x and y seems to be almost the same... just with x happening right after y.
-		if(rotationVals != null){
-			SensorManager.getRotationMatrixFromVector(R, rotationVals);
-			//android.opengl.Matrix.invertM(Rinv, 0, R, 0);
-			android.opengl.Matrix.multiplyMV(accRes, 0, R, 0, accV, 0);
-		
-			x = accRes[0];
-			y = accRes[1];
-			z = accRes[2];		
-		}/*
-		//shortAccel = d.format(accel);
-		/*
-		String xs = d.format(x);
-		String ys = d.format(y);
-		String zs = d.format(z);
-		tAccel.setText("X:"+xs+ " Y:"+ys+" Z: "+zs);
-		*/
 		String shortY = d.format(y);
 		String shortX = d.format(x);
 		String shortZ = d.format(z);
 		tAccel.setText("x: "+shortX+" \ny: "+shortY+" \nz:" +shortZ);
-		//tAccel.setText(shortAccel);
 		if (DEBUG) Log.d(DEBUG_TAG, "Acceleration: "+ shortAccel);
 		
 		// note: this is slower the more graphs we have.
@@ -527,25 +457,26 @@ public class MainActivity extends Activity implements
 		Point pz = new Point(newPos, Float.valueOf(shortZ));
 		chart.addNewPoints(p, py, pz);
 		chart.adjust_x((int)newPos);
-		view.repaint();  //commenting this out still gave quite a few GC_FOR_ALLOC
-		/*
-		new RecordDataTask().execute(shortAccel);
-		*/
-		// (attempt to) stop tracking when on foot.
+		view.repaint();
+
+		// Stop tracking when on foot.
 		//if(newActivity.equals(DetectedActivity.ON_FOOT)){
 		//	stopTracking();
-		//	((ToggleButton) (View)this.view).setChecked(false);// note entirely sure this works
+		//	((ToggleButton) (View)this.view).setChecked(false);
 		//}
 		String[] accel = {shortX, shortY, shortZ};
 		record(accel);
 		
 	}
     
-	// To test if the system waits for a void function or not:
+	/**
+	 * Records acceleration and location data.
+	 * @param accel Acceleration readings from sensor event.
+	 */
 	private void record(String[] accel){
 		String locationString = "";
 		if (location == null){
-			 //get latest known location useful when you need location quickly
+			 // Get latest known location. Useful when you need location quickly.
 	      	location = locationClient.getLastLocation();
 		}
 		if (location != null){
@@ -560,21 +491,15 @@ public class MainActivity extends Activity implements
 	}
 	
 	@Override
-	public void onConnectionFailed(ConnectionResult result) {
-		// TODO Auto-generated method stub
-		
+	public void onConnectionFailed(ConnectionResult result) {		
 	}
 
 	@Override
-	public void onConnected(Bundle connectionHint) {
-		// TODO Auto-generated method stub
-		
+	public void onConnected(Bundle connectionHint) {		
 	}
 
 	@Override
-	public void onDisconnected() {
-		// TODO Auto-generated method stub
-		
+	public void onDisconnected() {		
 	}
 
 	@Override

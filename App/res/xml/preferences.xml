@@ -4,10 +4,12 @@
         android:title="CouchDB server settings">
     <EditTextPreference 
         android:key="username"
-        android:title="Username" android:defaultValue="app_user"/>
+        android:title="Username" 
+        android:defaultValue="app_user"/>
     <EditTextPreference 
         android:key="password"
-        android:title="Password"/>
+        android:title="Password"
+        android:defaultValue="Android0.1"/>
     <EditTextPreference 
         android:key="domain"
         android:title="Server URL"
@@ -15,7 +17,7 @@
     <EditTextPreference 
         android:key="port"
         android:title="Port"
-        android:defaultValue="5984"/>
+        android:defaultValue="5986"/>
     <EditTextPreference
         android:key="prefix"
         android:title="File Prefix"

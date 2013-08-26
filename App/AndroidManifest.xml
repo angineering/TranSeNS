@@ -11,6 +11,10 @@
     <uses-feature 
         android:name="android.hardware.sensor.accelerometer"
         android:required="true" />
+    
+    <uses-feature
+        android:name="android.hardware.wifi"
+        android:required="true" />
 	
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
@@ -38,14 +42,6 @@
         </activity>
         <!-- Allows us to switch between our activity and the graphing activity -->
         <activity android:name="org.achartengine.GraphicalActivity" />
-        <!-- BroadcastReceiver registered here, as it then picks up broadcasts even when the application isn't running. -->
-      <!--    <receiver android:name="uk.co.computicake.angela.thesis.ConnectivityReceiver" android:permission="android.permission.ACCESS_NETWORK_STATE">
-            <intent-filter> 
-            	<action android:name="android.net.wifi.WIFI_STATE_CHANGED"/>
-            	<action android:name="android.net.wifi.STATE_CHANGED"/>    
-            	<action android:name="android.net.conn.CONNECTIVITY_CHANGE"/>
-            </intent-filter>           
-        </receiver> -->
         <service
             android:name="uk.co.computicake.angela.thesis.ActivityRecognitionService"
             android:label="@string/app_name"

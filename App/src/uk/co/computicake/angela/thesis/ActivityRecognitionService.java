@@ -3,18 +3,14 @@ package uk.co.computicake.angela.thesis;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesClient.ConnectionCallbacks;
 import com.google.android.gms.common.GooglePlayServicesClient.OnConnectionFailedListener;
-import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.location.ActivityRecognitionClient;
 import com.google.android.gms.location.ActivityRecognitionResult;
 import com.google.android.gms.location.DetectedActivity;
 
-import android.app.IntentService;
 import android.app.PendingIntent;
 import android.app.Service;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentSender.SendIntentException;
 import android.os.Binder;
 import android.os.Bundle;
 import android.os.Handler;
@@ -22,10 +18,10 @@ import android.os.IBinder;
 import android.os.ResultReceiver;
 import android.util.Log;
 
-// NOTE: When binding to a service onStartCommand is not used. This is only used when starting a service.
-// consider using startForeground(int, Notification) if you're worried about service possibly getting killed
-// TODO: contemplate doing something on unbind
-
+/**
+ * Service class handling activity recognition.
+ *
+ */
 public class ActivityRecognitionService extends Service implements 	
 	ConnectionCallbacks,
 	OnConnectionFailedListener{
@@ -36,11 +32,8 @@ public class ActivityRecognitionService extends Service implements
 	private PendingIntent callbackIntent; 
 	private ActivityIntentReceiver resultReceiver;
 	private final boolean DEBUG = false;
-	private final int DETECTION_INTERVAL_MS = Utils.MINUTE*2; //should really be every 5 minutes or so.
-	
+	private final int DETECTION_INTERVAL_MS = Utils.MINUTE*2;	
 	public static DetectedActivity ACTIVITY;
-	
-
 	
 	// The object that receives interaction from clients. (See RemoteService for a more complete example)
 	private final IBinder binder = new ActivityRecognitionBinder();
@@ -50,23 +43,16 @@ public class ActivityRecognitionService extends Service implements
 		resultReceiver = new ActivityIntentReceiver(new Handler());
 		resultReceiver.setParentContext(this);
 		Intent intent = new Intent(ActivityRecognitionService.this, ActivityRecognitionIntentService.class);
-		// name MUST include a package prefix!
-		//intent.putExtra(Utils.RESULT_RECEIVER, resultReceiver); //whyyyyyyyyyyyyyyyyyyyyyyyyyyyyy. maybe it will work better now that I set parent context?
 	    callbackIntent = PendingIntent.getService(this, 0, intent,
 	             PendingIntent.FLAG_UPDATE_CURRENT);	    
-	    activityClient.requestActivityUpdates(DETECTION_INTERVAL_MS, callbackIntent);		// should be seldom, say every 6 minutes
+	    activityClient.requestActivityUpdates(DETECTION_INTERVAL_MS, callbackIntent);
 	    if(DEBUG) Log.d(TAG, "connected");	
-	    // disconnect client as the in progress flas is synchronous (not sure what this means). this messes with unbind however. what is preferred? Turns out it picks up activities perfecly well disconnected. 
-	    // what are the benefits of being able to unbind it vs  disconnecting it right away? I guess it means we can't stop it polling for activities
-	    // same amount of GC_FOR_ALLOC with and without the disconnect. haven't tried to just start instead of binding the service tho. 
-	    //activityClient.disconnect();
 	}
 	
 	public void onCreate(){
 		if(ACTIVITY == null){
 			ACTIVITY = new DetectedActivity(DetectedActivity.UNKNOWN, 0);
 		}
-		//activity = new DetectedActivity(DetectedActivity.UNKNOWN, 0);
 		activityClient = new ActivityRecognitionClient(this, this, this);
 		activityClient.connect();
 		if(DEBUG) Log.d(TAG, "created");
@@ -75,9 +61,7 @@ public class ActivityRecognitionService extends Service implements
 	
 	@Override
 	public void onDisconnected() {
-		this.stopSelf();
-		// TODO Auto-generated method stub
-		
+		this.stopSelf();		
 	}
 	
 	public void onDestroy(){

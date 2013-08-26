@@ -1,12 +1,11 @@
 package uk.co.computicake.angela.thesis;
 
 /**
- * Low pass filters for reducing sensor noise
+ * Low pass filters for reducing sensor noise.
  */
 public class NoiseFilter {
 	private static final float STILL_NOISE = (float) 0.1; 
-	private static final float TRESHOLD = (float)10; //allows 0 to 100 in 4 seconds
-	// Smoothing constant for low-pass filter. Smaller values mean more smoothing.
+	// Smoothing constants for low-pass filter. Smaller values mean more smoothing.
 	private static final float ALPHA = 0.75f;
 	private static final float ALPHA_Z = 1f;
 

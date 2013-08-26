@@ -55,7 +55,7 @@ public class UploadIntentService extends IntentService {
 			return false;
 		}
 		
-		RESTClient rc = new RESTClient();
+		RestClient rc = new RestClient();
 		String db = fileTuple[0];
 		Log.d(Utils.TAG, "attempting to upload "+db);
 		boolean result;
@@ -73,7 +73,7 @@ public class UploadIntentService extends IntentService {
 		}
 		
 		// We only want to store the data if it doesn't already exist in the
-		// file system and didn't upload successfully
+		// file system and didn't upload successfully.
 		if((!result || !uploaded) && !foundFile){
 			Log.w(Utils.TAG, "Couldn't connect to server. Saving...");
 			Intent i = new Intent(this, StoreIntentService.class);
@@ -81,12 +81,12 @@ public class UploadIntentService extends IntentService {
 			startService(i);
 			return false;
 		}
-		// File was stored and uploaded successfully; delete
+		// File was stored and uploaded successfully; delete.
 		else if (foundFile && uploaded) {
 			deleteFile(fileTuple[0]);
 			return true;
 		}
-		// An already stored file could not be uploaded
+		// An already stored file could not be uploaded.
 		else if (!result || !uploaded){
 			return false;
 		}

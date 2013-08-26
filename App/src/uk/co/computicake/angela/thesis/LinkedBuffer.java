@@ -93,7 +93,7 @@ public class LinkedBuffer<T> implements Iterable<T> {
 	/**
 	 * Returns a comma separated string of values enclosed in "[]".
 	 */
-	public synchronized String toString(){ // yeeeeeah. this is not working...	in main thread, taking up a fuckload of memory.	
+	public synchronized String toString(){	
 		StringBuilder builder = new StringBuilder(count*Utils.APRX_JSON_LENGTH).append("[");
 		Iterator<T> it = this.iterator();
 		// to avoid ending with a comma
